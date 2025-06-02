@@ -111,8 +111,10 @@ public class AuthService {
         usuarioRol.setUsuario(usuario);
         usuarioRol.setRol(rol);
         usuarioRolRepository.save(usuarioRol);
-
-        return ResponseEntity.ok("Usuario creado correctamente con rol " + rol.getNombre());
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Usuario creado correctamente con rol " + rol.getNombre());
+        return ResponseEntity.ok(response);
     }
 
     public ResponseEntity<?> getAllUsers() {
