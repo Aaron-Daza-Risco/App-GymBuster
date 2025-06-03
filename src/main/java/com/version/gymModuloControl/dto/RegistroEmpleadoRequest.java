@@ -52,4 +52,9 @@ public class RegistroEmpleadoRequest {
         this.cupoMaximo = cupoMaximo;
     }
 
+
+    // Constructor vacío necesario para instanciación con setters
+    public RegistroEmpleadoRequest() {
+    }
+
 }

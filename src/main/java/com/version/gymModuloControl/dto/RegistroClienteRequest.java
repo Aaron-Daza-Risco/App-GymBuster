@@ -18,4 +18,8 @@ public class RegistroClienteRequest {
     private String celular;
     private LocalDate fechaNacimiento;
     private String direccion;
+
+
+    public RegistroClienteRequest() {
+    }
 }

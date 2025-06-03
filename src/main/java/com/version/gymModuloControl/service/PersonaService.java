@@ -1,6 +1,8 @@
 package com.version.gymModuloControl.service;
 
 
+import com.version.gymModuloControl.dto.RegistroClienteRequest;
+import com.version.gymModuloControl.dto.RegistroEmpleadoRequest;
 import com.version.gymModuloControl.model.*;
 import com.version.gymModuloControl.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -122,6 +124,47 @@ public class PersonaService {
         empleadoRepository.save(empleado);
 
         return ResponseEntity.ok("Empleado registrado correctamente.");
+    }
+
+
+    public List<RegistroClienteRequest> listarClientes() {
+        List<Cliente> clientes = clienteRepository.findAll();
+        return clientes.stream().map(cliente -> {
+            Persona p = cliente.getPersona();
+            RegistroClienteRequest dto = new RegistroClienteRequest();
+            dto.setNombre(p.getNombre());
+            dto.setApellidos(p.getApellidos());
+            dto.setGenero(p.getGenero());
+            dto.setCorreo(p.getCorreo());
+            dto.setDni(p.getDni());
+            dto.setCelular(p.getCelular());
+            dto.setFechaNacimiento(p.getFechaNacimiento());
+            dto.setDireccion(cliente.getDireccion());
+            return dto;
+        }).toList();
+    }
+
+    public List<RegistroEmpleadoRequest> listarEmpleados() {
+        List<Empleado> empleados = empleadoRepository.findAll();
+        return empleados.stream().map(empleado -> {
+            Persona p = empleado.getPersona();
+            RegistroEmpleadoRequest dto = new RegistroEmpleadoRequest();
+            dto.setNombre(p.getNombre());
+            dto.setApellidos(p.getApellidos());
+            dto.setGenero(p.getGenero());
+            dto.setCorreo(p.getCorreo());
+            dto.setDni(p.getDni());
+            dto.setCelular(p.getCelular());
+            dto.setFechaNacimiento(p.getFechaNacimiento());
+            dto.setRuc(empleado.getRuc());
+            dto.setSalario(empleado.getSalario());
+            dto.setFechaContratacion(empleado.getFechaContratacion());
+            if (empleado.getTipoInstructor() != null) {
+                dto.setTipoInstructor(empleado.getTipoInstructor().name());
+                dto.setCupoMaximo(empleado.getCupoMaximo());
+            }
+            return dto;
+        }).toList();
     }
 
 }

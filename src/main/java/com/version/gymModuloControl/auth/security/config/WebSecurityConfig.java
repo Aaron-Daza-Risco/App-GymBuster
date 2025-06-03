@@ -42,6 +42,7 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
@@ -52,6 +53,8 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/auth/register").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/registrar-cliente").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/registrar-empleado").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/persona/listar-clientes").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/persona/listar-empleados").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/empleados").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/plan/guardar").hasRole("ADMIN")
                         .requestMatchers("/api/plan/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+
 import java.util.List;
 
 
@@ -65,6 +66,19 @@ public class PersonaController {
                 request.getTipoInstructor(),
                 request.getCupoMaximo()
         );
+    }
+
+
+    @GetMapping("/listar-clientes")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<List<RegistroClienteRequest>> listarClientes() {
+        return ResponseEntity.ok(personaService.listarClientes());
+    }
+
+    @GetMapping("/listar-empleados")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<List<RegistroEmpleadoRequest>> listarEmpleados() {
+        return ResponseEntity.ok(personaService.listarEmpleados());
     }
 
 
