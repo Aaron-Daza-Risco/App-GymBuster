@@ -6,6 +6,7 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "venta")
@@ -23,6 +24,8 @@ public class Venta {
     private LocalDate fecha;
 
     private LocalTime hora;
+
+    private BigDecimal total;
 
     @ManyToOne
     @JoinColumn(name = "cliente_id", nullable = false)

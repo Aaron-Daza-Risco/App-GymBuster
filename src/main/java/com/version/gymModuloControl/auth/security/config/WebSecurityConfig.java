@@ -59,9 +59,25 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/plan/guardar").hasRole("ADMIN")
                         .requestMatchers("/api/plan/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/horario-empleado/agregar/**").hasRole("ADMIN")
-                        .requestMatchers("/api/horario-empleado/listar")
-                        .hasAnyRole("ADMIN", "RECEPCIONISTA", "ENTRENADOR")
-                        .anyRequest().authenticated())
+                        .requestMatchers("/api/horario-empleado/listar").hasAnyRole("ADMIN", "RECEPCIONISTA", "ENTRENADOR")
+                        .requestMatchers("/api/categoria/guardar").hasRole("ADMIN")
+                        .requestMatchers("/api/categoria/actualizar").hasRole("ADMIN")
+                        .requestMatchers("/api/categoria/*/estado").hasRole("ADMIN")
+                        .requestMatchers("/api/categoria/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/producto/guardar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/producto/actualizar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/producto/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/producto/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        // --- Permisos para ventas ---
+                        .requestMatchers("/api/venta/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/guardar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/cambiar-estado/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/detalle/agregar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/detalle/listar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/detalle/eliminar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/pago/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
