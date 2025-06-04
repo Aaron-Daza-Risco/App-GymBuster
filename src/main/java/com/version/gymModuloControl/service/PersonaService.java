@@ -23,6 +23,8 @@ public class PersonaService {
     private ClienteRepository clienteRepository;
     @Autowired
     private EmpleadoRepository empleadoRepository;
+    @Autowired
+    private EmailService emailService;
 
     @Transactional
     public ResponseEntity<?> registrarCliente(Persona persona, Usuario usuario, String direccion) {
@@ -41,6 +43,20 @@ public class PersonaService {
         cliente.setEstado(true);
         cliente.setDireccion(direccion);
         clienteRepository.save(cliente);
+
+        // ✉️ Enviar correo
+        String correoCliente = persona.getCorreo();
+        String asunto = "¡Bienvenido a GYM APP!";
+        String cuerpo = "Hola " + persona.getNombre() + " " + persona.getApellidos() + ",\n\n" +
+                "Te damos la bienvenida a *GYM APP* 🏋️‍♂️.\n\n" +
+                "Tu cuenta ha sido creada correctamente.\n\n" +
+                "👉 Usuario: " + usuario.getNombreUsuario() + "\n\n" +
+                "Por seguridad, te recomendamos cambiar tu contraseña la primera vez que ingreses al sistema.\n\n" +
+                "¡Ya puedes iniciar sesión y comenzar tu entrenamiento!\n\n" +
+                "Gracias por confiar en nosotros 💪.";
+
+
+        emailService.enviarCorreo(correoCliente, asunto, cuerpo);
 
         return ResponseEntity.ok("Cliente registrado correctamente.");
     }

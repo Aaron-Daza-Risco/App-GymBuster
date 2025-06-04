@@ -94,6 +94,7 @@ public class AuthService {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para crear usuarios.");
         }
 
+
         // Crear usuario
         Usuario usuario = new Usuario();
         usuario.setNombreUsuario(request.getNombreUsuario());
