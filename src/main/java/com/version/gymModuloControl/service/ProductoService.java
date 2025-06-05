@@ -76,4 +76,13 @@ public class ProductoService {
         }
         return null;
     }
+
+    @Transactional
+    public boolean eliminarProducto(Integer idProducto) {
+        if (productoRepository.existsById(idProducto)) {
+            productoRepository.deleteById(idProducto);
+            return true;
+        }
+        return false;
+    }
 }

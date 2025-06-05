@@ -54,4 +54,15 @@ public class ProductoController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @DeleteMapping("/eliminar/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> eliminarProducto(@PathVariable Integer id) {
+        boolean eliminado = productoService.eliminarProducto(id);
+        if (eliminado) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

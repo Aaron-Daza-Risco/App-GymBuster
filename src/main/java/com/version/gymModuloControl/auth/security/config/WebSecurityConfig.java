@@ -69,6 +69,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/producto/actualizar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/producto/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/producto/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/producto/eliminar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         // --- Permisos para ventas ---
                         .requestMatchers("/api/venta/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/venta/guardar").hasAnyRole("ADMIN", "RECEPCIONISTA")
