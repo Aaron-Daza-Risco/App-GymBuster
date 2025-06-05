@@ -36,4 +36,14 @@ public class CategoriaService {
         return null;
     }
 
+
+    @Transactional
+    public boolean eliminarCategoria(Integer idCategoria) {
+        if (categoriaRepository.existsById(idCategoria)) {
+            categoriaRepository.deleteById(idCategoria);
+            return true;
+        }
+        return false;
+    }
+
 }

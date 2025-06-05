@@ -47,4 +47,15 @@ public class CategoriaController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @DeleteMapping("/eliminar/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> eliminarCategoria(@PathVariable Integer id) {
+        boolean eliminada = categoriaService.eliminarCategoria(id);
+        if (eliminada) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

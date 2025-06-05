@@ -64,6 +64,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/categoria/actualizar").hasRole("ADMIN")
                         .requestMatchers("/api/categoria/*/estado").hasRole("ADMIN")
                         .requestMatchers("/api/categoria/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/categoria/eliminar/**").hasRole("ADMIN")
                         .requestMatchers("/api/producto/guardar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/producto/actualizar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/producto/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA")
