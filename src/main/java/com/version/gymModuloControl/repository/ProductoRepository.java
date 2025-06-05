@@ -4,5 +4,6 @@ import com.version.gymModuloControl.model.Producto;
 
 public interface ProductoRepository extends JpaRepository<Producto, Integer> {
 
+    boolean existsByCategoria_IdCategoria(Integer idCategoria);
 
 }

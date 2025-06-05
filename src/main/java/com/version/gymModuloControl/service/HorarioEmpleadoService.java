@@ -53,4 +53,32 @@ public class HorarioEmpleadoService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public HorarioEmpleado actualizarHorario(Integer horarioId, HorarioEmpleado horarioActualizado) {
+        HorarioEmpleado horario = horarioEmpleadoRepository.findById(horarioId)
+                .orElseThrow(() -> new RuntimeException("Horario no encontrado"));
+        horario.setDia(horarioActualizado.getDia());
+        horario.setHoraInicio(horarioActualizado.getHoraInicio());
+        horario.setHoraFin(horarioActualizado.getHoraFin());
+        horario.setTurno(horarioActualizado.getTurno());
+        // Agrega aquí otros campos a actualizar si es necesario
+        return horarioEmpleadoRepository.save(horario);
+    }
+
+    @Transactional
+    public boolean eliminarHorario(Integer horarioId) {
+        if (horarioEmpleadoRepository.existsById(horarioId)) {
+            horarioEmpleadoRepository.deleteById(horarioId);
+            return true;
+        }
+        return false;
+    }
+
+    @Transactional
+    public HorarioEmpleado cambiarEstadoHorario(Integer horarioId, Boolean estado) {
+        HorarioEmpleado horario = horarioEmpleadoRepository.findById(horarioId)
+                .orElseThrow(() -> new RuntimeException("Horario no encontrado"));
+        horario.setEstado(estado);
+        return horarioEmpleadoRepository.save(horario);
+    }
 }

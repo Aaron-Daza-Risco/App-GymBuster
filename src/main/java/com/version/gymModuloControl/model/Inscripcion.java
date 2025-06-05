@@ -45,5 +45,10 @@ public class Inscripcion {
 
     @OneToMany(mappedBy = "inscripcion", cascade = CascadeType.ALL)
     private List<DetalleInscripcion> detallesInscripcion;
+
+    @ManyToOne
+    @JoinColumn(name = "desempeno_id", foreignKey = @ForeignKey(name = "inscripcion_ibfk_desempeno"))
+    private Desempeno desempeno;
+
 }
 

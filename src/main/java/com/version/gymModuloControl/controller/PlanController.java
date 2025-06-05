@@ -28,4 +28,42 @@ public class PlanController {
     public List<Plan> listarTodos() {
         return planService.listarTodos();
     }
+
+
+    @PutMapping("/actualizar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> actualizarPlan(@RequestBody Plan plan) {
+        try {
+            Plan actualizado = planService.actualizarPlan(plan);
+            return ResponseEntity.ok(actualizado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/estado")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> cambiarEstadoPlan(@PathVariable Integer id, @RequestBody Boolean estado) {
+        Plan plan = planService.cambiarEstadoPlan(id, estado);
+        if (plan != null) {
+            return ResponseEntity.ok(plan);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/eliminar/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> eliminarPlan(@PathVariable Integer id) {
+        try {
+            boolean eliminado = planService.eliminarPlan(id);
+            if (eliminado) {
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

@@ -43,4 +43,37 @@ public class HorarioEmpleadoController {
             return horarioEmpleadoService.listarInfoHorariosEmpleados();
         }
     }
+
+    @PutMapping("/actualizar/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> actualizarHorario(@PathVariable Integer id, @RequestBody HorarioEmpleado horarioActualizado) {
+        try {
+            HorarioEmpleado actualizado = horarioEmpleadoService.actualizarHorario(id, horarioActualizado);
+            return ResponseEntity.ok(actualizado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/eliminar/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> eliminarHorario(@PathVariable Integer id) {
+        boolean eliminado = horarioEmpleadoService.eliminarHorario(id);
+        if (eliminado) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/{id}/estado")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> cambiarEstadoHorario(@PathVariable Integer id, @RequestBody Boolean estado) {
+        try {
+            HorarioEmpleado actualizado = horarioEmpleadoService.cambiarEstadoHorario(id, estado);
+            return ResponseEntity.ok(actualizado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

@@ -12,4 +12,7 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Intege
     
     // Cambiar esto
     List<Inscripcion> findByRecepcionistaIdEmpleado(Integer recepcionistaId);
+
+    boolean existsByPlan_IdPlan(Integer idPlan);
+
 }
