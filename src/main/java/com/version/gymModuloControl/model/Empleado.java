@@ -47,9 +47,9 @@ public class Empleado {
     @OneToMany(mappedBy = "recepcionista", cascade = CascadeType.ALL)
     private List<Inscripcion> inscripcionesRecibidas;
 
-    @ManyToOne
-    @JoinColumn(name = "especialidad_id")
-    private Especialidad especialidad;
+    @OneToMany(mappedBy = "empleado", cascade = CascadeType.ALL)
+    private List<InstructorEspecialidad> especialidades;
+
 
 }
 

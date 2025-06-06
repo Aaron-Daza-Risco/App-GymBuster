@@ -23,5 +23,6 @@ public class Especialidad {
     private Boolean estado = true;
 
     @OneToMany(mappedBy = "especialidad", cascade = CascadeType.ALL)
-    private List<Empleado> empleados;
+    private List<InstructorEspecialidad> empleados;
+
 }
