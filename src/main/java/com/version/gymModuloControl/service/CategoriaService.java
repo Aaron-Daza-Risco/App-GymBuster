@@ -27,9 +27,17 @@ public class CategoriaService {
         return categoriaRepository.save(categoria);
     }
 
+
     @Transactional
     public Categoria actualizarCategoria(Categoria categoria) {
-        return categoriaRepository.save(categoria);
+        Categoria existente = categoriaRepository.findById(categoria.getIdCategoria()).orElse(null);
+        if (existente != null) {
+            existente.setNombre(categoria.getNombre());
+            existente.setDescripcion(categoria.getDescripcion());
+            existente.setEstado(categoria.getEstado());
+            return categoriaRepository.save(existente);
+        }
+        return null;
     }
 
     @Transactional
