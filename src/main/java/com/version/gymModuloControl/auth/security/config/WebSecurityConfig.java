@@ -84,6 +84,11 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/venta/detalle/listar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/venta/detalle/eliminar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/venta/pago/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/pieza/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/pieza/guardar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/pieza/actualizar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/pieza/eliminar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/pieza/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
