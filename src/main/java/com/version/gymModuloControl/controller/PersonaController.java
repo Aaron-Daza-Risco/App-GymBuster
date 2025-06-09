@@ -1,85 +1,83 @@
 package com.version.gymModuloControl.controller;
 
-import com.version.gymModuloControl.dto.RegistroClienteRequest;
-import com.version.gymModuloControl.dto.RegistroEmpleadoRequest;
-import com.version.gymModuloControl.model.Persona;
-import com.version.gymModuloControl.model.Usuario;
-import com.version.gymModuloControl.repository.UsuarioRepository;
-import com.version.gymModuloControl.service.PersonaService;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-
-import java.util.List;
-
+import com.version.gymModuloControl.service.PersonaService;
 
 @RestController
-@RequestMapping("/api/persona")
+@RequestMapping("/api/personas")
+@CrossOrigin(origins = "*")
 public class PersonaController {
 
     @Autowired
     private PersonaService personaService;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @PostMapping("/registrar-cliente")
+    @GetMapping("/clientes")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<?> registrarCliente(@RequestBody RegistroClienteRequest request, @RequestParam Integer usuarioId) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        Persona persona = new Persona();
-        persona.setNombre(request.getNombre());
-        persona.setApellidos(request.getApellidos());
-        persona.setGenero(request.getGenero());
-        persona.setCorreo(request.getCorreo());
-        persona.setDni(request.getDni());
-        persona.setCelular(request.getCelular());
-        persona.setFechaNacimiento(request.getFechaNacimiento());
-
-        return personaService.registrarCliente(persona, usuario, request.getDireccion());
-    }
-
-    @PostMapping("/registrar-empleado")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<?> registrarEmpleado(@RequestBody RegistroEmpleadoRequest request, @RequestParam Integer usuarioId) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        Persona persona = new Persona();
-        persona.setNombre(request.getNombre());
-        persona.setApellidos(request.getApellidos());
-        persona.setGenero(request.getGenero());
-        persona.setCorreo(request.getCorreo());
-        persona.setDni(request.getDni());
-        persona.setCelular(request.getCelular());
-        persona.setFechaNacimiento(request.getFechaNacimiento());
-
-
-        return personaService.registrarEmpleado(
-                persona,
-                usuario,
-                request.getRuc(),
-                request.getSalario(),
-                request.getFechaContratacion(),
-                request.getTipoInstructor(),
-                request.getCupoMaximo()
-        );
-    }
-
-
-    @GetMapping("/listar-clientes")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<List<RegistroClienteRequest>> listarClientes() {
+    public ResponseEntity<?> listarClientes() {
         return ResponseEntity.ok(personaService.listarClientes());
     }
 
-    @GetMapping("/listar-empleados")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<List<RegistroEmpleadoRequest>> listarEmpleados() {
+    @GetMapping("/empleados")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> listarEmpleados() {
         return ResponseEntity.ok(personaService.listarEmpleados());
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> buscarPorId(@PathVariable Integer id) {
+        return personaService.buscarPersonaPorId(id);
+    }
 
+    @GetMapping("/buscar/dni/{dni}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> buscarPorDni(@PathVariable String dni) {
+        return personaService.buscarPorDni(dni);
+    }
+
+    @GetMapping("/buscar/correo/{correo}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> buscarPorCorreo(@PathVariable String correo) {
+        return personaService.buscarPorCorreo(correo);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> actualizarPersona(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
+        return personaService.actualizarDatosPersona(id, datos);
+    }
+
+    @PutMapping("/clientes/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> actualizarCliente(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
+        return personaService.actualizarDatosCliente(id, datos);
+    }
+
+    @PutMapping("/empleados/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> actualizarEmpleado(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
+        return personaService.actualizarDatosEmpleado(id, datos);
+    }
+
+    @PutMapping("/clientes/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> cambiarEstadoCliente(@PathVariable Integer id, @RequestBody Map<String, Boolean> payload) {
+        try {
+            return personaService.actualizarDatosCliente(id, Map.of("estado", payload.get("estado")));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }

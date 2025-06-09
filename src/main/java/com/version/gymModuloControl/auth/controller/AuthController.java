@@ -28,8 +28,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        JwtResponse jwtResponse = authService.login(loginRequest);
-        return ResponseEntity.ok(jwtResponse);
+        System.out.println("Intento de login con: " + loginRequest.getNombreUsuario());
+        try {
+            JwtResponse jwtResponse = authService.login(loginRequest);
+            return ResponseEntity.ok(jwtResponse);
+        } catch (Exception e) {
+            System.err.println("Error en autenticación: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
     }
 
     @PostMapping("/register")
@@ -57,6 +63,27 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al actualizar el estado del usuario: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        try {
+            return authService.getCurrentUserInfo(authentication);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener información del usuario: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/usuarios/{id}/rol")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            return authService.updateUserRole(id.intValue(), payload.get("rol"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al actualizar el rol del usuario: " + e.getMessage());
         }
     }
 }
