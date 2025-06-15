@@ -63,12 +63,14 @@ public class PersonaController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> actualizarCliente(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
         return personaService.actualizarDatosCliente(id, datos);
-    }
-
-    @PutMapping("/empleados/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    }    @PutMapping("/empleados/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<?> actualizarEmpleado(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
-        return personaService.actualizarDatosEmpleado(id, datos);
+        try {
+            return personaService.actualizarDatosEmpleado(id, datos);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PutMapping("/clientes/{id}/estado")

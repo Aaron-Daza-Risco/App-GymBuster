@@ -1,5 +1,6 @@
 package com.version.gymModuloControl.auth.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.version.gymModuloControl.auth.dto.JwtResponse;
 import com.version.gymModuloControl.auth.dto.LoginRequest;
 import com.version.gymModuloControl.auth.dto.RegisterRequest;
+import com.version.gymModuloControl.auth.dto.UserSecurityDetailsDTO;
 import com.version.gymModuloControl.auth.service.AuthService;
 @RestController
 @RequestMapping("/api/auth")
@@ -54,13 +56,44 @@ public class AuthController {
                     .body("Error al obtener la lista de usuarios: " + e.getMessage());
         }
     }
+    
+    @GetMapping("/usuarios/seguridad")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUsersSecurityDetails() {
+        try {
+            List<UserSecurityDetailsDTO> securityDetails = authService.getUsersSecurityDetails();
+            if (securityDetails.isEmpty()) {
+                // Si no hay datos, devolver una lista vacía pero con código 200 OK
+                return ResponseEntity.ok(securityDetails); 
+            }
+            return ResponseEntity.ok(securityDetails);
+        } catch (Exception e) {
+            System.err.println("Error al obtener detalles de seguridad: " + e.getMessage());
+            e.printStackTrace(); // Para más detalle en los logs del servidor
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener detalles de seguridad de usuarios: " + e.getMessage());
+        }
+    }
 
     @PutMapping("/usuarios/{id}/estado")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> toggleUserStatus(@PathVariable Long id, @RequestBody Map<String, Boolean> payload) {
         try {
-            return authService.toggleUserStatus(id.intValue(), payload.get("estado"));
+            Boolean nuevoEstado = payload.get("estado");
+            
+            // Validar que el estado no sea nulo
+            if (nuevoEstado == null) {
+                return ResponseEntity.badRequest().body("El estado no puede ser nulo");
+            }
+            
+            System.out.println("Cambiando estado de usuario ID " + id + " a: " + (nuevoEstado ? "Activo" : "Inactivo"));
+            
+            // Llamar al servicio para actualizar el estado
+            ResponseEntity<?> result = authService.toggleUserStatus(id.intValue(), nuevoEstado);
+            return result;
         } catch (Exception e) {
+            System.err.println("Error al actualizar el estado del usuario: " + e.getMessage());
+            e.printStackTrace(); // Más detalles en el log
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al actualizar el estado del usuario: " + e.getMessage());
         }

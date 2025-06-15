@@ -1,6 +1,8 @@
 package com.version.gymModuloControl.auth.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.version.gymModuloControl.auth.dto.JwtResponse;
 import com.version.gymModuloControl.auth.dto.LoginRequest;
 import com.version.gymModuloControl.auth.dto.RegisterRequest;
+import com.version.gymModuloControl.auth.dto.UserSecurityDetailsDTO;
 import com.version.gymModuloControl.auth.security.jwt.JwtUtils;
 import com.version.gymModuloControl.model.Cliente;
 import com.version.gymModuloControl.model.Empleado;
@@ -74,24 +78,37 @@ public class AuthService {
     
     @Autowired
     private EspecialidadRepository especialidadRepository;
-    
-    @Autowired
+      @Autowired
     private InstructorEspecialidadRepository instructorEspecialidadRepository;
 
     public JwtResponse login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getNombreUsuario(), loginRequest.getContrasena()));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getNombreUsuario(), loginRequest.getContrasena()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
 
-        return new JwtResponse(jwt, "Bearer", userDetails.getUsername(), roles);
-    }    @Transactional
+            // Actualizar último acceso
+            Optional<Usuario> usuarioOpt = usuarioRepository.findByNombreUsuario(loginRequest.getNombreUsuario());
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                usuario.setUltimoAcceso(LocalDateTime.now());
+                usuarioRepository.save(usuario);
+            }
+
+            return new JwtResponse(jwt, "Bearer", userDetails.getUsername(), roles);
+        } catch (AuthenticationException e) {
+            throw e;
+        }
+    }
+
+    @Transactional
     public ResponseEntity<?> register(RegisterRequest request, Authentication authentication) {
         // Verificar si existe el usuario
         if (usuarioRepository.findByNombreUsuario(request.getNombreUsuario()).isPresent()) {
@@ -122,10 +139,19 @@ public class AuthService {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para crear usuarios.");
         }
 
+        // Evaluar longitud mínima de contraseña
+        if (request.getContrasena().length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body("Error: La contraseña debe tener al menos 6 caracteres.");
+        }
+
         // 1. Crear Usuario
         Usuario usuario = new Usuario();
         usuario.setNombreUsuario(request.getNombreUsuario());
-        usuario.setContrasena(passwordEncoder.encode(request.getContrasena()));
+        
+        // Encriptar contraseña
+        String passwordEncriptada = passwordEncoder.encode(request.getContrasena());
+        usuario.setContrasena(passwordEncriptada);
         usuario.setEstado(true);
         usuarioRepository.save(usuario);
 
@@ -186,6 +212,23 @@ public class AuthService {
         return ResponseEntity.ok(response);
     }
 
+    // Método para obtener detalles de seguridad de todos los usuarios
+    public List<UserSecurityDetailsDTO> getUsersSecurityDetails() {
+        List<Usuario> usuarios = usuarioRepository.findAll();
+        List<UserSecurityDetailsDTO> securityDetails = new ArrayList<>();
+        
+        for (Usuario usuario : usuarios) {
+            UserSecurityDetailsDTO dto = new UserSecurityDetailsDTO();
+            dto.setId(usuario.getId());
+            dto.setNombreUsuario(usuario.getNombreUsuario());
+            dto.setUltimoAcceso(usuario.getUltimoAcceso());
+            dto.setEstado(usuario.getEstado());
+            securityDetails.add(dto);
+        }
+        
+        return securityDetails;
+    }
+
     public ResponseEntity<?> getAllUsers() {
         List<Usuario> usuarios = usuarioRepository.findAll();
 
@@ -202,6 +245,15 @@ public class AuthService {
                     .collect(Collectors.toList());
 
             userDTO.put("roles", roles);
+            
+            // Añadir información de la persona (incluyendo el DNI)
+            if (usuario.getPersona() != null) {
+                userDTO.put("nombre", usuario.getPersona().getNombre());
+                userDTO.put("apellidos", usuario.getPersona().getApellidos());
+                userDTO.put("dni", usuario.getPersona().getDni());
+                userDTO.put("correo", usuario.getPersona().getCorreo());
+            }
+            
             return userDTO;
         }).collect(Collectors.toList());
 
@@ -209,23 +261,41 @@ public class AuthService {
     }
 
     public ResponseEntity<?> toggleUserStatus(Integer id, Boolean estado) {
-        return usuarioRepository.findById(id)
-                .map(usuario -> {
-                    usuario.setEstado(estado);
-                    usuarioRepository.save(usuario);
+        try {
+            System.out.println("Servicio toggleUserStatus - ID: " + id + ", Nuevo estado: " + estado);
+            
+            return usuarioRepository.findById(id)
+                    .map(usuario -> {
+                        // Guardar el estado anterior para logging
+                        Boolean estadoAnterior = usuario.getEstado();
+                        
+                        // Actualizar estado
+                        usuario.setEstado(estado);
+                        Usuario usuarioActualizado = usuarioRepository.save(usuario);
+                        
+                        System.out.println("Usuario actualizado - ID: " + id + ", Estado anterior: " 
+                                + estadoAnterior + ", Nuevo estado: " + usuarioActualizado.getEstado());
 
-                    Map<String, Object> response = new HashMap<>();
-                    response.put("message", "Estado del usuario actualizado correctamente");
-                    response.put("id", usuario.getId());
-                    response.put("estado", usuario.getEstado());
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("message", "Estado del usuario actualizado correctamente");
+                        response.put("id", usuarioActualizado.getId());
+                        response.put("estado", usuarioActualizado.getEstado());
 
-                    return ResponseEntity.ok(response);
-                })
-                .orElseGet(() -> {
-                    Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("message", "Usuario no encontrado con ID: " + id);
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-                });
+                        return ResponseEntity.ok(response);
+                    })
+                    .orElseGet(() -> {
+                        System.err.println("Usuario no encontrado con ID: " + id);
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("message", "Usuario no encontrado con ID: " + id);
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+                    });
+        } catch (Exception e) {
+            System.err.println("Error inesperado al actualizar estado de usuario: " + e.getMessage());
+            e.printStackTrace(); // Para obtener más detalles en el log
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error al actualizar estado: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.version.gymModuloControl.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,10 @@ public class Usuario {
 
     @Column(name = "nombre_usuario", nullable = false, length = 100)
     private String nombreUsuario;
+
+    // Campo para registrar el último acceso del usuario
+    @Column(name = "ultimo_acceso")
+    private LocalDateTime ultimoAcceso;
 
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL)
     private Persona persona;
