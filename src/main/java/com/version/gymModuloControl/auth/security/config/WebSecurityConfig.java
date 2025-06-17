@@ -51,6 +51,11 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/auth/usuarios").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/usuarios/seguridad").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/usuarios/*/estado").hasRole("ADMIN") 
+                        .requestMatchers("/api/auth/usuarios/*/rol").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/persona/registrar-cliente").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/registrar-empleado").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/listar-clientes").hasAnyRole("ADMIN", "RECEPCIONISTA")
