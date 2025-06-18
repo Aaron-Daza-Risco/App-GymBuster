@@ -56,9 +56,7 @@ public class AuthService {
     JwtUtils jwtUtils;
 
     @Autowired
-    RolRepository rolRepository;
-
-    @Autowired
+    RolRepository rolRepository;    @Autowired
     private UsuarioRepository usuarioRepository;
 
     @Autowired
@@ -66,6 +64,9 @@ public class AuthService {
 
     @Autowired
     private UsuarioRolRepository usuarioRolRepository;
+    
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
 
     @Autowired
     PasswordEncoder passwordEncoder;
@@ -79,9 +80,7 @@ public class AuthService {
     @Autowired
     private EspecialidadRepository especialidadRepository;
       @Autowired
-    private InstructorEspecialidadRepository instructorEspecialidadRepository;
-
-    public JwtResponse login(LoginRequest loginRequest) {
+    private InstructorEspecialidadRepository instructorEspecialidadRepository;    public JwtResponse login(LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getNombreUsuario(), loginRequest.getContrasena()));
@@ -94,15 +93,24 @@ public class AuthService {
                     .map(GrantedAuthority::getAuthority)
                     .collect(Collectors.toList());
 
-            // Actualizar último acceso
+            // Actualizar último acceso y obtener ID del usuario
             Optional<Usuario> usuarioOpt = usuarioRepository.findByNombreUsuario(loginRequest.getNombreUsuario());
+            Integer userId = null;
             if (usuarioOpt.isPresent()) {
                 Usuario usuario = usuarioOpt.get();
                 usuario.setUltimoAcceso(LocalDateTime.now());
                 usuarioRepository.save(usuario);
+                userId = usuario.getId();
             }
 
-            return new JwtResponse(jwt, "Bearer", userDetails.getUsername(), roles);
+            // Logging para propósitos de depuración
+            System.out.println("Usuario ID: " + userId);
+            System.out.println("Roles asignados: " + roles);
+
+            // Modificar JwtResponse para incluir el ID
+            JwtResponse response = new JwtResponse(userId, jwt, "Bearer", userDetails.getUsername(), roles);
+            
+            return response;
         } catch (AuthenticationException e) {
             throw e;
         }
@@ -369,9 +377,7 @@ public class AuthService {
         userInfo.put("genero", persona.getGenero());
 
         return ResponseEntity.ok(userInfo);
-    }
-
-    @Transactional
+    }    @Transactional
     public ResponseEntity<?> updateUserRole(int userId, String rolNombre) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findById(userId);
         if (usuarioOpt.isEmpty()) {
@@ -386,21 +392,125 @@ public class AuthService {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Rol no válido");
         }
-
-        // Limpiar roles existentes
+        
+        // Determinar el rol actual del usuario
+        String rolActual = "";
+        if (!usuario.getUsuarioRoles().isEmpty()) {
+            rolActual = usuario.getUsuarioRoles().get(0).getRol().getNombre();
+        }
+        
+        // Verificar las reglas de negocio:
+        // 1. Los empleados no pueden cambiar a rol CLIENTE
+        // 2. Los clientes sí pueden cambiar a roles de empleados
+        boolean esRolCliente = rolNombre.equals("CLIENTE");
+        boolean esRolEmpleado = rolNombre.equals("ADMIN") || rolNombre.equals("RECEPCIONISTA") || rolNombre.equals("ENTRENADOR");
+        boolean usuarioEsCliente = rolActual.equals("CLIENTE");
+        boolean usuarioEsEmpleado = rolActual.equals("ADMIN") || rolActual.equals("RECEPCIONISTA") || rolActual.equals("ENTRENADOR");
+        
+        if (usuarioEsEmpleado && esRolCliente) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("No está permitido cambiar un empleado a rol de cliente");
+        }        // Limpiar roles existentes - usamos un enfoque más fuerte para asegurar la eliminación
         List<UsuarioRol> rolesActuales = usuarioRolRepository.findByUsuario_Id(userId);
-        usuarioRolRepository.deleteAll(rolesActuales);
-
-        // Asignar nuevo rol
+        
+        // Información de depuración
+        System.out.println("Roles actuales del usuario " + userId + ":");
+        for (UsuarioRol ur : rolesActuales) {
+            System.out.println(" - " + ur.getRol().getNombre() + " (ID: " + ur.getIdUsuarioRol() + ")");
+        }
+        
+        // Primero, desasociar los roles del usuario (romper la relación)
+        usuario.setUsuarioRoles(new ArrayList<>());
+        usuarioRepository.save(usuario);
+        
+        // Luego eliminar los registros de usuario_rol
+        if (!rolesActuales.isEmpty()) {
+            usuarioRolRepository.deleteAll(rolesActuales);
+            entityManager.flush(); // Asegurar que se apliquen los cambios
+        }
+        
+        // Crear y asignar el nuevo rol
         UsuarioRol nuevoUsuarioRol = new UsuarioRol();
         nuevoUsuarioRol.setUsuario(usuario);
         nuevoUsuarioRol.setRol(rolOpt.get());
-        usuarioRolRepository.save(nuevoUsuarioRol);
+        nuevoUsuarioRol = usuarioRolRepository.save(nuevoUsuarioRol);
+        
+        // Actualizar la colección de roles en el usuario (para mantener la consistencia)
+        List<UsuarioRol> nuevosRoles = new ArrayList<>();
+        nuevosRoles.add(nuevoUsuarioRol);
+        usuario.setUsuarioRoles(nuevosRoles);
+        usuarioRepository.save(usuario);
+        
+        // Vaciar la caché de Hibernate para asegurar que los cambios se reflejen
+        entityManager.flush();
+        entityManager.clear();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("mensaje", "Rol actualizado correctamente");
+        response.put("nuevoRol", rolNombre);
+        
+        // Si un cliente es promovido a empleado, crear el registro de Empleado correspondiente
+        if (usuarioEsCliente && esRolEmpleado) {
+            // Buscar la Persona asociada al Usuario
+            Persona persona = usuario.getPersona();
+            if (persona != null) {
+                // Verificar si ya existe un registro de Empleado para esta Persona
+                Optional<Empleado> empleadoExistente = empleadoRepository.findByPersonaIdPersona(persona.getIdPersona());
+                
+                if (empleadoExistente.isEmpty()) {
+                    // Crear un nuevo registro de Empleado
+                    Empleado nuevoEmpleado = new Empleado();
+                    nuevoEmpleado.setPersona(persona);
+                    nuevoEmpleado.setEstado(true);
+                    nuevoEmpleado.setFechaContratacion(LocalDate.now());
+                    
+                    // Guardar con valores por defecto, el frontend solicitará completar los datos
+                    empleadoRepository.save(nuevoEmpleado);
+                    
+                    response.put("empleadoCreado", true);
+                    response.put("mensaje", "Rol actualizado correctamente. Se ha creado un registro de empleado");
+                }
+            }
+        }
 
-        return ResponseEntity.ok()
-                .body(Map.of(
-                    "mensaje", "Rol actualizado correctamente",
-                    "nuevoRol", rolNombre
-                ));
+        return ResponseEntity.ok(response);
+    }
+
+
+    @Transactional
+    public ResponseEntity<?> updateUserCredentials(int userId, String nombreUsuario, String contrasena) {
+        try {
+            // Validar que el ID sea válido
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(userId);
+            if (!usuarioOpt.isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No se encontró el usuario con ID: " + userId);
+            }
+            
+            Usuario usuario = usuarioOpt.get();
+            
+            // Validar que el nuevo nombre de usuario no exista ya (si es diferente al actual)
+            if (!usuario.getNombreUsuario().equals(nombreUsuario)) {
+                Optional<Usuario> existingUsuario = usuarioRepository.findByNombreUsuario(nombreUsuario);
+                if (existingUsuario.isPresent()) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body("El nombre de usuario ya está en uso: " + nombreUsuario);
+                }
+                usuario.setNombreUsuario(nombreUsuario);
+            }
+            
+            // Actualizar la contraseña solo si se proporciona una nueva
+            if (contrasena != null && !contrasena.isEmpty()) {
+                usuario.setContrasena(passwordEncoder.encode(contrasena));
+            }
+            
+            // Guardar los cambios
+            usuarioRepository.save(usuario);
+            
+            return ResponseEntity.ok("Usuario actualizado correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al actualizar credenciales: " + e.getMessage());
+        }
     }
 }

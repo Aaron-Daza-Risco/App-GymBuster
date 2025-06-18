@@ -119,4 +119,17 @@ public class AuthController {
                     .body("Error al actualizar el rol del usuario: " + e.getMessage());
         }
     }
+
+    @PutMapping("/usuarios/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserCredentials(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            String nombreUsuario = payload.get("nombreUsuario");
+            String contrasena = payload.get("contrasena"); // Será null si no se envía
+            return authService.updateUserCredentials(id.intValue(), nombreUsuario, contrasena);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al actualizar credenciales del usuario: " + e.getMessage());
+        }
+    }
 }
