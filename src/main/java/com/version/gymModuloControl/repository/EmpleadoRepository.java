@@ -10,4 +10,5 @@ import com.version.gymModuloControl.model.Empleado;
 public interface EmpleadoRepository extends JpaRepository<Empleado, Integer> {
     List<Empleado> findByEstado(Boolean estado);    List<Empleado> findByTipoInstructorIsNotNull();
     Empleado findByPersonaUsuarioNombreUsuario(String nombreUsuario);
+
 }

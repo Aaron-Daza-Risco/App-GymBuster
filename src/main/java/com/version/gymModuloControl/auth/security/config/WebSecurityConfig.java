@@ -94,6 +94,9 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/pieza/actualizar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/pieza/eliminar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/pieza/*/estado").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/asistencia/marcar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/asistencia/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/horario-empleado/empleado/*/dia/*").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
