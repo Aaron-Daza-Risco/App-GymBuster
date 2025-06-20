@@ -1,15 +1,14 @@
 package com.version.gymModuloControl.service;
 
-import com.version.gymModuloControl.model.Plan;
-import com.version.gymModuloControl.repository.InscripcionRepository;
-import com.version.gymModuloControl.repository.PlanRepository;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
-
+import com.version.gymModuloControl.model.Plan;
+import com.version.gymModuloControl.repository.InscripcionRepository;
+import com.version.gymModuloControl.repository.PlanRepository;
 
 @Service
 public class PlanService {
@@ -58,8 +57,5 @@ public class PlanService {
         }
         return false;
     }
-
-
-
 
 }
