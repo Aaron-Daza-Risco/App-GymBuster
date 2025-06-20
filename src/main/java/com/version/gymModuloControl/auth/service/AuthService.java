@@ -441,6 +441,17 @@ public class AuthService {
         usuario.setUsuarioRoles(nuevosRoles);
         usuarioRepository.save(usuario);
         
+        // Si el nuevo rol no es ENTRENADOR, limpiar los campos específicos de entrenador
+        if (!rolNombre.equals("ENTRENADOR")) {
+            Optional<Empleado> empleadoOpt = empleadoRepository.findByPersonaIdPersona(usuario.getPersona().getIdPersona());
+            if (empleadoOpt.isPresent()) {
+                Empleado empleado = empleadoOpt.get();
+                empleado.setTipoInstructor(null);
+                empleado.setCupoMaximo(null);
+                empleadoRepository.save(empleado);
+            }
+        }
+
         // Vaciar la caché de Hibernate para asegurar que los cambios se reflejen
         entityManager.flush();
         entityManager.clear();
