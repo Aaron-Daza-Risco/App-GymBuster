@@ -2,7 +2,6 @@ package com.version.gymModuloControl.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -21,15 +20,14 @@ public class AsistenciaEmpleado {
 
     private LocalDate fecha;
 
+    @Enumerated(EnumType.STRING)
+    private EstadoPuntualidad estadoPuntualidad;
+
     @Column(name = "hora_entrada")
     private LocalTime horaEntrada;
-
-    @Column(name = "hora_salida")
-    private LocalTime horaSalida;
 
     @ManyToOne
     @JoinColumn(name = "empleado_id", nullable = false)
     private Empleado empleado;
 }
-
 
