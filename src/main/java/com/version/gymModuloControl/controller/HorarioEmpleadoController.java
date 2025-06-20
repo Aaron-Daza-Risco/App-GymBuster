@@ -76,4 +76,14 @@ public class HorarioEmpleadoController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/empleado/{idEmpleado}/dia/{dia}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<List<HorarioEmpleado>> listarHorariosPorEmpleadoYDia(
+            @PathVariable Long idEmpleado,
+            @PathVariable String dia) {
+        List<HorarioEmpleado> horarios = horarioEmpleadoService.obtenerHorariosPorEmpleadoYDia(idEmpleado, dia);
+        return ResponseEntity.ok(horarios);
+    }
+
 }

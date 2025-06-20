@@ -41,14 +41,17 @@ public class HorarioEmpleadoService {
         }
         return empleado.getHorarios().stream()
                 .map(h -> new HorarioEmpleadoInfoDTO(
+                        h.getIdHorarioEmpleado(),
                         empleado.getPersona().getNombre(),
                         empleado.getPersona().getApellidos(),
                         empleado.getPersona().getUsuario().getUsuarioRoles().stream()
                                 .findFirst().map(ur -> ur.getRol().getNombre()).orElse(""),
+
                         h.getDia(),
                         h.getHoraInicio(),
                         h.getHoraFin(),
-                        h.getTurno()
+                        h.getTurno(),
+                        h.getEstado()
                 ))
                 .collect(Collectors.toList());
     }
@@ -76,9 +79,16 @@ public class HorarioEmpleadoService {
 
     @Transactional
     public HorarioEmpleado cambiarEstadoHorario(Integer horarioId, Boolean estado) {
-        HorarioEmpleado horario = horarioEmpleadoRepository.findById(horarioId)
-                .orElseThrow(() -> new RuntimeException("Horario no encontrado"));
-        horario.setEstado(estado);
-        return horarioEmpleadoRepository.save(horario);
+        HorarioEmpleado horario = horarioEmpleadoRepository.findById(horarioId).orElse(null);
+        if (horario != null) {
+            horario.setEstado(estado);
+            return horarioEmpleadoRepository.save(horario);
+        }
+        return null;
     }
+
+    public List<HorarioEmpleado> obtenerHorariosPorEmpleadoYDia(Long idEmpleado, String dia) {
+        return horarioEmpleadoRepository.findByEmpleadoAndDia(idEmpleado, dia.toUpperCase());
+    }
+
 }

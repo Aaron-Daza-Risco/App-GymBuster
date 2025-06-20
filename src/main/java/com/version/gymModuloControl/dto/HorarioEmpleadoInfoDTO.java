@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 public class HorarioEmpleadoInfoDTO {
 
+    private Integer idHorarioEmpleado;
     private String nombre;
     private String apellidos;
     private String rol;
@@ -14,9 +15,11 @@ public class HorarioEmpleadoInfoDTO {
     private LocalTime horaInicio;
     private LocalTime horaFin;
     private Turno turno;
+    private Boolean estado;
 
-    public HorarioEmpleadoInfoDTO(String nombre, String apellidos, String rol,
-                                  String dia, LocalTime horaInicio, LocalTime horaFin, Turno turno) {
+    public HorarioEmpleadoInfoDTO(Integer idHorarioEmpleado, String nombre, String apellidos, String rol,
+                                  String dia, LocalTime horaInicio, LocalTime horaFin, Turno turno, Boolean estado) {
+        this.idHorarioEmpleado = idHorarioEmpleado;
         this.nombre = nombre;
         this.apellidos = apellidos;
         this.rol = rol;
@@ -24,6 +27,6 @@ public class HorarioEmpleadoInfoDTO {
         this.horaInicio = horaInicio;
         this.horaFin = horaFin;
         this.turno = turno;
+        this.estado = estado;
     }
-
 }

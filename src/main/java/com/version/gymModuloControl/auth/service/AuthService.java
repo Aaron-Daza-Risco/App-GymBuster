@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.version.gymModuloControl.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -76,6 +77,9 @@ public class AuthService {
     
     @Autowired
     private EmpleadoRepository empleadoRepository;
+
+    @Autowired
+    private EmailService emailService;
     
     @Autowired
     private EspecialidadRepository especialidadRepository;
@@ -184,7 +188,6 @@ public class AuthService {
         persona.setUsuario(usuario);
         personaRepository.save(persona);
 
-        // 4. Crear Cliente o Empleado según el rol
         if (rolSolicitado.equals("CLIENTE")) {
             Cliente cliente = new Cliente();
             cliente.setPersona(persona);
@@ -192,6 +195,24 @@ public class AuthService {
             cliente.setEstado(true);
             cliente.setFechaRegistro(LocalDate.now());
             clienteRepository.save(cliente);
+
+            // Enviar correo de bienvenida
+            String correoCliente = persona.getCorreo();
+            String asunto = "¡Bienvenido a GYM APP!";
+            String cuerpo = "Hola " + persona.getNombre() + " " + persona.getApellidos() + ",\n\n" +
+                    "Te damos la bienvenida a *GYM APP* 🏋️‍♂️.\n\n" +
+                    "Tu cuenta ha sido creada correctamente.\n\n" +
+                    "👉 Usuario: " + usuario.getNombreUsuario() + "\n\n" +
+                    "Por seguridad, te recomendamos cambiar tu contraseña la primera vez que ingreses al sistema.\n\n" +
+                    "¡Ya puedes iniciar sesión y comenzar tu entrenamiento!\n\n" +
+                    "Gracias por confiar en nosotros 💪.";
+
+            try {
+                emailService.enviarCorreo(correoCliente, asunto, cuerpo);
+            } catch (Exception e) {
+                System.err.println("Error al enviar correo: " + e.getMessage());
+                // Continuar con el registro aunque falle el envío del correo
+            }
         } else {
             Empleado empleado = new Empleado();
             empleado.setPersona(persona);
