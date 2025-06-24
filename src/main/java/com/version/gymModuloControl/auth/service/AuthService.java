@@ -199,7 +199,7 @@ public class AuthService {
             // Enviar correo de bienvenida
             String correoCliente = persona.getCorreo();
             String asunto = "¡Bienvenido a GYM APP!";
-            String cuerpo = "Hola " + persona.getNombre() + " " + persona.getApellidos() + ",\n\n" +
+            String cuerpo = "Hola " + persona.getNombre() + " " +persona.getApellidos() + ",\n\n" +
                     "Te damos la bienvenida a *GYM APP* 🏋️‍♂️.\n\n" +
                     "Tu cuenta ha sido creada correctamente.\n\n" +
                     "👉 Usuario: " + usuario.getNombreUsuario() + "\n\n" +

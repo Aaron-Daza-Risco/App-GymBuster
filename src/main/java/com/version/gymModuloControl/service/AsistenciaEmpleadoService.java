@@ -134,68 +134,68 @@ public class AsistenciaEmpleadoService {
     }
 
 
-//    @Scheduled(cron = "0 */2 * * * *")
-//    @Transactional(rollbackFor = Exception.class)
-//    public void registrarFaltasAutomaticas() {
-//        log.info("=== Iniciando verificación de faltas ===");
-//        LocalDateTime ahora = LocalDateTime.now();
-//        String diaActual = normalizarDia(ahora.getDayOfWeek().getDisplayName(TextStyle.FULL, new Locale("es", "ES")));
-//
-//        List<Empleado> empleados = empleadoRepository.findByEstado(true);
-//        log.info("Verificando {} empleados", empleados.size());
-//
-//        for (Empleado empleado : empleados) {
-//            try {
-//                List<HorarioEmpleado> horariosHoy = empleado.getHorarios().stream()
-//                        .filter(h -> h.getEstado() && normalizarDia(h.getDia()).equals(diaActual))
-//                        .filter(h -> h.getHoraFin().isBefore(ahora.toLocalTime()))
-//                        .toList();
-//
-//                for (HorarioEmpleado horario : horariosHoy) {
-//                    registrarFaltaParaHorario(empleado, horario, ahora);
-//                }
-//            } catch (Exception e) {
-//                log.error("Error procesando empleado {}: {}", empleado.getIdEmpleado(), e.getMessage());
-//                // No propagamos la excepción para continuar con el siguiente empleado
-//            }
-//        }
-//        log.info("=== Verificación de faltas completada ===");
-//    }
-//
-//    @Transactional(propagation = Propagation.REQUIRES_NEW)
-//    protected void registrarFaltaParaHorario(Empleado empleado, HorarioEmpleado horario, LocalDateTime ahora) {
-//        log.info("Verificando horario {} - {} para empleado: {} {}",
-//                horario.getHoraInicio(),
-//                horario.getHoraFin(),
-//                empleado.getPersona().getNombre(),
-//                empleado.getPersona().getApellidos());
-//
-//        boolean asistenciaRegistrada = asistenciaEmpleadoRepository
-//                .existsByEmpleadoAndFechaAndHoraEntradaBetween(
-//                        empleado,
-//                        ahora.toLocalDate(),
-//                        horario.getHoraInicio().minusMinutes(15),
-//                        horario.getHoraFin()
-//                );
-//
-//        if (!asistenciaRegistrada) {
-//            AsistenciaEmpleado falta = new AsistenciaEmpleado();
-//            falta.setEmpleado(empleado);
-//            falta.setFecha(ahora.toLocalDate());
-//            falta.setHoraEntrada(horario.getHoraInicio());
-//            falta.setEstadoPuntualidad(EstadoPuntualidad.FALTO);
-//            falta.setEstado(true);
-//
-//            try {
-//                asistenciaEmpleadoRepository.save(falta);
-//                log.info("Falta registrada exitosamente");
-//            } catch (Exception e) {
-//                log.error("Error al registrar falta: {}", e.getMessage());
-//                throw e; // Propagamos la excepción para que se haga rollback de esta transacción específica
-//            }
-//        } else {
-//            log.info("El empleado ya tiene registro de asistencia para este horario");
-//        }
-//    }
+    @Scheduled(cron = "0 */2 * * * *")
+    @Transactional(rollbackFor = Exception.class)
+    public void registrarFaltasAutomaticas() {
+        log.info("=== Iniciando verificación de faltas ===");
+        LocalDateTime ahora = LocalDateTime.now();
+        String diaActual = normalizarDia(ahora.getDayOfWeek().getDisplayName(TextStyle.FULL, new Locale("es", "ES")));
+
+        List<Empleado> empleados = empleadoRepository.findByEstado(true);
+        log.info("Verificando {} empleados", empleados.size());
+
+        for (Empleado empleado : empleados) {
+            try {
+                List<HorarioEmpleado> horariosHoy = empleado.getHorarios().stream()
+                        .filter(h -> h.getEstado() && normalizarDia(h.getDia()).equals(diaActual))
+                        .filter(h -> h.getHoraFin().isBefore(ahora.toLocalTime()))
+                        .toList();
+
+                for (HorarioEmpleado horario : horariosHoy) {
+                    registrarFaltaParaHorario(empleado, horario, ahora);
+                }
+            } catch (Exception e) {
+                log.error("Error procesando empleado {}: {}", empleado.getIdEmpleado(), e.getMessage());
+                // No propagamos la excepción para continuar con el siguiente empleado
+            }
+        }
+        log.info("=== Verificación de faltas completada ===");
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void registrarFaltaParaHorario(Empleado empleado, HorarioEmpleado horario, LocalDateTime ahora) {
+        log.info("Verificando horario {} - {} para empleado: {} {}",
+                horario.getHoraInicio(),
+                horario.getHoraFin(),
+                empleado.getPersona().getNombre(),
+                empleado.getPersona().getApellidos());
+
+        boolean asistenciaRegistrada = asistenciaEmpleadoRepository
+                .existsByEmpleadoAndFechaAndHoraEntradaBetween(
+                        empleado,
+                        ahora.toLocalDate(),
+                        horario.getHoraInicio().minusMinutes(15),
+                        horario.getHoraFin()
+                );
+
+        if (!asistenciaRegistrada) {
+            AsistenciaEmpleado falta = new AsistenciaEmpleado();
+            falta.setEmpleado(empleado);
+            falta.setFecha(ahora.toLocalDate());
+            falta.setHoraEntrada(horario.getHoraInicio());
+            falta.setEstadoPuntualidad(EstadoPuntualidad.FALTO);
+            falta.setEstado(true);
+
+            try {
+                asistenciaEmpleadoRepository.save(falta);
+                log.info("Falta registrada exitosamente");
+            } catch (Exception e) {
+                log.error("Error al registrar falta: {}", e.getMessage());
+                throw e; // Propagamos la excepción para que se haga rollback de esta transacción específica
+            }
+        } else {
+            log.info("El empleado ya tiene registro de asistencia para este horario");
+        }
+    }
 
 }

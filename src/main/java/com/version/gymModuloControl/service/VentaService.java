@@ -4,12 +4,14 @@ import com.version.gymModuloControl.dto.DetalleDTO;
 import com.version.gymModuloControl.dto.VentaConDetalleDTO;
 import com.version.gymModuloControl.model.Cliente;
 import com.version.gymModuloControl.model.Empleado;
+import com.version.gymModuloControl.model.PagoVenta;
 import com.version.gymModuloControl.model.Venta;
 import com.version.gymModuloControl.repository.ClienteRepository;
 import com.version.gymModuloControl.repository.EmpleadoRepository;
 import com.version.gymModuloControl.repository.VentaRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -32,16 +34,24 @@ public class VentaService {
         Venta venta = ventaRepository.findById(idVenta)
                 .orElseThrow(() -> new IllegalArgumentException("Venta no encontrada"));
 
-        VentaConDetalleDTO dto = new VentaConDetalleDTO(
+        PagoVenta pagoVenta = venta.getPagoVenta();
+
+        return new VentaConDetalleDTO(
                 venta.getIdVenta(),
                 venta.getCliente().getPersona().getNombre(),
                 venta.getCliente().getPersona().getApellidos(),
+                venta.getCliente().getPersona().getDni(),
                 venta.getEmpleado().getPersona().getNombre(),
                 venta.getEmpleado().getPersona().getApellidos(),
+                venta.getEmpleado().getPersona().getDni(),
                 venta.getFecha(),
                 venta.getHora(),
+                venta.getTotal() != null ? venta.getTotal().doubleValue() : 0.0,
                 venta.getEstado(),
-                venta.getTotal().doubleValue(),
+                pagoVenta != null ? pagoVenta.getIdPago() : null,
+                pagoVenta != null ? pagoVenta.getVuelto() : null,
+                pagoVenta != null ? pagoVenta.getMontoPagado() : null,
+                pagoVenta != null ? pagoVenta.getMetodoPago() : null,
                 venta.getDetallesVenta().stream().map(detalle -> new DetalleDTO(
                         detalle.getIdDetalleVenta(),
                         detalle.getProducto().getIdProducto(),
@@ -51,10 +61,7 @@ public class VentaService {
                         detalle.getSubtotal().doubleValue()
                 )).toList()
         );
-
-        return dto;
     }
-
     public List<VentaConDetalleDTO> listarVentasConDetalle() {
         List<Venta> ventas = ventaRepository.findAll();
         return ventas.stream()
@@ -63,25 +70,27 @@ public class VentaService {
     }
 
 
+
+
     @Transactional
     public Venta guardarVenta(Venta venta) {
         if (venta.getCliente() == null || venta.getCliente().getIdCliente() == null) {
             throw new IllegalArgumentException("Debe especificar un cliente válido para la venta.");
         }
 
-        if (venta.getEmpleado() == null || venta.getEmpleado().getIdEmpleado() == null) {
-            throw new IllegalArgumentException("Debe especificar un empleado válido para la venta.");
+        // Obtener el empleado actual desde la sesión
+        String nombreUsuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        Empleado empleadoActual = empleadoRepository.findByPersonaUsuarioNombreUsuario(nombreUsuario);
+        if (empleadoActual == null) {
+            throw new IllegalArgumentException("Empleado no encontrado para el usuario actual.");
         }
 
-        // Verificar que cliente y empleado existan
+        // Verificar que el cliente exista
         Cliente cliente = clienteRepository.findById(venta.getCliente().getIdCliente())
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado."));
 
-        Empleado empleado = empleadoRepository.findById(venta.getEmpleado().getIdEmpleado())
-                .orElseThrow(() -> new IllegalArgumentException("Empleado no encontrado."));
-
         venta.setCliente(cliente);
-        venta.setEmpleado(empleado);
+        venta.setEmpleado(empleadoActual);
         venta.setFecha(LocalDate.now());
         venta.setHora(LocalTime.now());
         venta.setEstado(true);

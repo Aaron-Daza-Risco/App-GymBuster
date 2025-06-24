@@ -30,7 +30,7 @@ public class PersonaController {
     }
 
     @GetMapping("/empleados")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<?> listarEmpleados() {
         return ResponseEntity.ok(personaService.listarEmpleados());
     }

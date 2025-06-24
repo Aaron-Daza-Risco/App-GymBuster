@@ -13,4 +13,5 @@ public interface EmpleadoRepository extends JpaRepository<Empleado, Integer> {
     List<Empleado> findByTipoInstructorIsNotNull();
     Empleado findByPersonaUsuarioNombreUsuario(String nombreUsuario);
     Optional<Empleado> findByPersonaIdPersona(Integer idPersona);
+
 }
