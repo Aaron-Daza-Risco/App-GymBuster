@@ -98,7 +98,6 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/asistencia/marcar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/asistencia/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/horario-empleado/empleado/*/dia/*").hasAnyRole("ADMIN", "RECEPCIONISTA")
-                        .requestMatchers("/api/reniec/dni/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
