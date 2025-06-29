@@ -18,7 +18,9 @@ public class Alquiler {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idAlquiler;
 
-    private Boolean estado = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado")
+    private EstadoAlquiler estado = EstadoAlquiler.ACTIVO;
 
     @Column(name = "fecha_inicio")
     private LocalDate fechaInicio;

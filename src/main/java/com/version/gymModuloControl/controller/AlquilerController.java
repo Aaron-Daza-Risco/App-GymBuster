@@ -4,6 +4,7 @@ import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
 import com.version.gymModuloControl.dto.DetallesAlquilerRequest;
 import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.DetalleAlquiler;
+import com.version.gymModuloControl.model.EstadoAlquiler;
 import com.version.gymModuloControl.model.PagoAlquiler;
 import com.version.gymModuloControl.service.AlquilerService;
 import com.version.gymModuloControl.service.DetalleAlquilerService;
@@ -49,12 +50,78 @@ public class AlquilerController {
 
     @PutMapping("/cambiar-estado/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<?> cambiarEstado(@PathVariable Integer id, @RequestParam Boolean estado) {
-        Alquiler alquilerActualizado = alquilerService.cambiarEstadoAlquiler(id, estado);
-        if (alquilerActualizado != null) {
+    public ResponseEntity<?> cambiarEstado(@PathVariable Integer id, @RequestParam String estado) {
+        try {
+            EstadoAlquiler nuevoEstado = EstadoAlquiler.valueOf(estado.toUpperCase());
+            Alquiler alquilerActualizado = alquilerService.cambiarEstadoAlquiler(id, nuevoEstado);
+            if (alquilerActualizado != null) {
+                return ResponseEntity.ok(alquilerActualizado);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Estado inválido. Los estados válidos son: " + 
+                    java.util.Arrays.toString(EstadoAlquiler.values()));
+        }
+    }
+    
+    @PutMapping("/finalizar/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> finalizarAlquiler(@PathVariable Integer id) {
+        try {
+            Alquiler alquilerActualizado = alquilerService.finalizarAlquiler(id);
+            if (alquilerActualizado != null) {
+                return ResponseEntity.ok(alquilerActualizado);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al finalizar el alquiler: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/cancelar/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> cancelarAlquiler(@PathVariable Integer id) {
+        try {
+            Alquiler alquilerActualizado = alquilerService.cancelarAlquiler(id);
+            if (alquilerActualizado != null) {
+                return ResponseEntity.ok(alquilerActualizado);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al cancelar el alquiler: " + e.getMessage());
+        }
+    }
+    
+    @PutMapping("/vencido/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> marcarVencido(@PathVariable Integer id) {
+        try {
+            Alquiler alquilerActualizado = alquilerService.marcarVencido(id);
+            if (alquilerActualizado != null) {
+                return ResponseEntity.ok(alquilerActualizado);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al marcar el alquiler como vencido: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/registrar-devolucion/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> registrarDevolucion(@PathVariable Integer id) {
+        try {
+            Alquiler alquilerActualizado = alquilerService.registrarDevolucion(id);
             return ResponseEntity.ok(alquilerActualizado);
-        } else {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al procesar la devolución: " + e.getMessage());
         }
     }
 

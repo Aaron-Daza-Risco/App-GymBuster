@@ -3,6 +3,9 @@ package com.version.gymModuloControl.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+
+import com.version.gymModuloControl.model.EstadoAlquiler;
+
 import lombok.Data;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -22,7 +25,7 @@ public class AlquilerConDetalleDTO {
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
     private Double total;
-    private Boolean estado;
+    private EstadoAlquiler estado;
     private Integer idPago;
     private BigDecimal vuelto;
     private BigDecimal montoPagado;

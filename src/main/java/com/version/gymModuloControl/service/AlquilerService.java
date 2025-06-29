@@ -7,12 +7,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.version.gymModuloControl.model.EstadoAlquiler;
+
 import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
 import com.version.gymModuloControl.dto.DetalleAlquilerDTO;
 import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.Cliente;
+import com.version.gymModuloControl.model.DetalleAlquiler;
 import com.version.gymModuloControl.model.Empleado;
 import com.version.gymModuloControl.model.PagoAlquiler;
+import com.version.gymModuloControl.model.Pieza;
 import com.version.gymModuloControl.repository.AlquilerInterface;
 import com.version.gymModuloControl.repository.ClienteRepository;
 import com.version.gymModuloControl.repository.EmpleadoRepository;
@@ -97,18 +101,61 @@ public class AlquilerService {
             alquiler.setFechaFin(LocalDate.now().plusDays(7));
         }
         
-        alquiler.setEstado(true);
+        alquiler.setEstado(EstadoAlquiler.ACTIVO);
 
         return alquilerRepository.save(alquiler);
     }
 
     @Transactional
-    public Alquiler cambiarEstadoAlquiler(Integer idAlquiler, Boolean estado) {
+    public Alquiler cambiarEstadoAlquiler(Integer idAlquiler, EstadoAlquiler nuevoEstado) {
         Alquiler alquiler = alquilerRepository.findById(idAlquiler).orElse(null);
         if (alquiler != null) {
-            alquiler.setEstado(estado);
+            alquiler.setEstado(nuevoEstado);
             return alquilerRepository.save(alquiler);
         }
         return null;
+    }
+    
+    @Transactional
+    public Alquiler finalizarAlquiler(Integer idAlquiler) {
+        return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.FINALIZADO);
+    }
+    
+    @Transactional
+    public Alquiler cancelarAlquiler(Integer idAlquiler) {
+        return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.CANCELADO);
+    }
+    
+    @Transactional
+    public Alquiler marcarVencido(Integer idAlquiler) {
+        return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.VENCIDO);
+    }
+
+    @Transactional
+    public Alquiler registrarDevolucion(Integer idAlquiler) {
+        // Buscar el alquiler
+        Alquiler alquiler = alquilerRepository.findById(idAlquiler)
+                .orElseThrow(() -> new IllegalArgumentException("Alquiler no encontrado con ID: " + idAlquiler));
+        
+        // Verificar que el alquiler esté activo o vencido
+        if (alquiler.getEstado() == EstadoAlquiler.FINALIZADO || alquiler.getEstado() == EstadoAlquiler.CANCELADO) {
+            throw new IllegalStateException("No se puede procesar la devolución de un alquiler ya finalizado o cancelado");
+        }
+        
+        // Obtener los detalles del alquiler para actualizar el inventario
+        List<DetalleAlquiler> detalles = alquiler.getDetalles();
+        
+        // Actualizar el stock de cada pieza
+        for (DetalleAlquiler detalle : detalles) {
+            Pieza pieza = detalle.getPieza();
+            pieza.setStock(pieza.getStock() + detalle.getCantidad());
+            // No necesitamos guardar la pieza aquí, se guardará automáticamente con la transacción
+        }
+        
+        // Marcar el alquiler como finalizado (devuelto)
+        alquiler.setEstado(EstadoAlquiler.FINALIZADO);
+        
+        // Guardar los cambios
+        return alquilerRepository.save(alquiler);
     }
 }
