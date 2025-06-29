@@ -114,4 +114,6 @@ public class DetalleAlquilerService {
         }
         return detallesGuardados;
     }
+
+    // El método crearDetalleAlquiler se eliminó por ser redundante con agregarDetalleAlquiler
 }

@@ -1,5 +1,6 @@
 package com.version.gymModuloControl.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -7,14 +8,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.version.gymModuloControl.model.EstadoAlquiler;
-
+import com.version.gymModuloControl.dto.AlquilerCompletoDTO;
 import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
 import com.version.gymModuloControl.dto.DetalleAlquilerDTO;
 import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.Cliente;
 import com.version.gymModuloControl.model.DetalleAlquiler;
 import com.version.gymModuloControl.model.Empleado;
+import com.version.gymModuloControl.model.EstadoAlquiler;
 import com.version.gymModuloControl.model.PagoAlquiler;
 import com.version.gymModuloControl.model.Pieza;
 import com.version.gymModuloControl.repository.AlquilerInterface;
@@ -34,6 +35,12 @@ public class AlquilerService {
 
     @Autowired
     private EmpleadoRepository empleadoRepository;
+
+    @Autowired
+    private DetalleAlquilerService detalleAlquilerService;
+
+    @Autowired
+    private PagoAlquilerService pagoAlquilerService;
 
     public AlquilerConDetalleDTO obtenerAlquilerConDetalle(Integer idAlquiler) {
         Alquiler alquiler = alquilerRepository.findById(idAlquiler)
@@ -75,36 +82,7 @@ public class AlquilerService {
                 .toList();
     }
 
-    @Transactional
-    public Alquiler guardarAlquiler(Alquiler alquiler) {
-        if (alquiler.getCliente() == null || alquiler.getCliente().getIdCliente() == null) {
-            throw new IllegalArgumentException("Debe especificar un cliente válido para el alquiler.");
-        }
-
-        // Obtener el empleado actual desde la sesión
-        String nombreUsuario = SecurityContextHolder.getContext().getAuthentication().getName();
-        Empleado empleadoActual = empleadoRepository.findByPersonaUsuarioNombreUsuario(nombreUsuario);
-        if (empleadoActual == null) {
-            throw new IllegalArgumentException("Empleado no encontrado para el usuario actual.");
-        }
-
-        // Verificar que el cliente exista
-        Cliente cliente = clienteRepository.findById(alquiler.getCliente().getIdCliente())
-                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado."));
-
-        alquiler.setCliente(cliente);
-        alquiler.setEmpleado(empleadoActual);
-        alquiler.setFechaInicio(LocalDate.now());
-        
-        // Si no se proporciona fecha de fin, se establece por defecto a 7 días después
-        if (alquiler.getFechaFin() == null) {
-            alquiler.setFechaFin(LocalDate.now().plusDays(7));
-        }
-        
-        alquiler.setEstado(EstadoAlquiler.ACTIVO);
-
-        return alquilerRepository.save(alquiler);
-    }
+    // El método guardarAlquiler se eliminó por ser redundante con el enfoque de crearAlquilerCompleto
 
     @Transactional
     public Alquiler cambiarEstadoAlquiler(Integer idAlquiler, EstadoAlquiler nuevoEstado) {
@@ -157,5 +135,69 @@ public class AlquilerService {
         
         // Guardar los cambios
         return alquilerRepository.save(alquiler);
+    }
+
+    // Método para crear un alquiler completo en una sola transacción
+    @Transactional
+    public AlquilerConDetalleDTO crearAlquilerCompleto(AlquilerCompletoDTO alquilerCompletoDTO) {
+        // 1. Obtener el empleado actual desde la sesión
+        String nombreUsuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        Empleado empleadoActual = empleadoRepository.findByPersonaUsuarioNombreUsuario(nombreUsuario);
+        if (empleadoActual == null) {
+            throw new IllegalArgumentException("Empleado no encontrado para el usuario actual.");
+        }
+
+        // 2. Verificar que el cliente exista
+        Cliente cliente = clienteRepository.findById(alquilerCompletoDTO.getClienteId())
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado."));
+
+        // 3. Crear y guardar el alquiler
+        Alquiler alquiler = new Alquiler();
+        alquiler.setCliente(cliente);
+        alquiler.setEmpleado(empleadoActual);
+        alquiler.setFechaInicio(LocalDate.now());
+        alquiler.setFechaFin(alquilerCompletoDTO.getFechaFin() != null ? 
+                alquilerCompletoDTO.getFechaFin() : LocalDate.now().plusDays(7));
+        alquiler.setEstado(EstadoAlquiler.ACTIVO);
+        
+        // 4. Guardar el alquiler para obtener un ID
+        alquiler = alquilerRepository.save(alquiler);
+        
+        // 5. Procesar y guardar los detalles del alquiler
+        List<DetalleAlquiler> detalles = new java.util.ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        
+        for (DetalleAlquilerDTO detalleDTO : alquilerCompletoDTO.getDetalles()) {
+            DetalleAlquiler detalle = detalleAlquilerService.agregarDetalleAlquiler(
+                alquiler.getIdAlquiler(), 
+                detalleDTO.getPiezaId(), 
+                detalleDTO.getCantidad()
+            );
+            detalles.add(detalle);
+            
+            // Calcular el subtotal y agregarlo al total
+            if (detalle.getSubtotal() != null) {
+                total = total.add(detalle.getSubtotal());
+            }
+        }
+        
+        alquiler.setDetalles(detalles);
+        alquiler.setTotal(total);
+        
+        // 6. Registrar el pago
+        if (alquilerCompletoDTO.getMontoPagado() != null && !alquilerCompletoDTO.getMetodoPago().isEmpty()) {
+            PagoAlquiler pago = pagoAlquilerService.registrarPago(
+                alquiler.getIdAlquiler(),
+                alquilerCompletoDTO.getMontoPagado(),
+                alquilerCompletoDTO.getMetodoPago()
+            );
+            alquiler.setPago(pago);
+        }
+        
+        // 7. Guardar los cambios del alquiler
+        alquiler = alquilerRepository.save(alquiler);
+        
+        // 8. Devolver el DTO con toda la información
+        return obtenerAlquilerConDetalle(alquiler.getIdAlquiler());
     }
 }

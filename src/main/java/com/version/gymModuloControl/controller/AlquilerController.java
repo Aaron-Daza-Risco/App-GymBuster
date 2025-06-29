@@ -1,20 +1,28 @@
 package com.version.gymModuloControl.controller;
 
-import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
-import com.version.gymModuloControl.dto.DetallesAlquilerRequest;
-import com.version.gymModuloControl.model.Alquiler;
-import com.version.gymModuloControl.model.DetalleAlquiler;
-import com.version.gymModuloControl.model.EstadoAlquiler;
-import com.version.gymModuloControl.model.PagoAlquiler;
-import com.version.gymModuloControl.service.AlquilerService;
-import com.version.gymModuloControl.service.DetalleAlquilerService;
-import com.version.gymModuloControl.service.PagoAlquilerService;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.version.gymModuloControl.dto.AlquilerCompletoDTO;
+import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
+import com.version.gymModuloControl.model.Alquiler;
+import com.version.gymModuloControl.model.DetalleAlquiler;
+import com.version.gymModuloControl.model.EstadoAlquiler;
+import com.version.gymModuloControl.service.AlquilerService;
+import com.version.gymModuloControl.service.DetalleAlquilerService;
+import com.version.gymModuloControl.service.PagoAlquilerService;
 
 @RestController
 @RequestMapping("/api/alquiler")
@@ -37,14 +45,18 @@ public class AlquilerController {
         return ResponseEntity.ok(alquilerService.listarAlquileresConDetalle());
     }
 
-    @PostMapping("/guardar")
+
+    @PostMapping("/crear-completo")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<?> guardarAlquiler(@RequestBody Alquiler alquiler) {
+    public ResponseEntity<?> crearAlquilerCompleto(@RequestBody AlquilerCompletoDTO alquilerCompletoDTO) {
         try {
-            Alquiler guardado = alquilerService.guardarAlquiler(alquiler);
-            return ResponseEntity.ok(guardado);
+            AlquilerConDetalleDTO alquilerCreado = alquilerService.crearAlquilerCompleto(alquilerCompletoDTO);
+            return ResponseEntity.ok(alquilerCreado);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body("Error al procesar el alquiler completo: " + e.getMessage());
         }
     }
 
@@ -127,17 +139,6 @@ public class AlquilerController {
 
     // --------- DETALLES ---------
 
-    @PostMapping("/detalle/agregar-lote")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<?> agregarDetallesAlquiler(@RequestBody DetallesAlquilerRequest request) {
-        try {
-            List<DetalleAlquiler> detallesGuardados = detalleAlquilerService.agregarDetallesAlquiler(request.getAlquilerId(), request.getDetalles());
-            return ResponseEntity.ok(detallesGuardados);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
     @GetMapping("/detalle/listar/{alquilerId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<List<DetalleAlquiler>> listarDetalles(@PathVariable Integer alquilerId) {
@@ -156,19 +157,4 @@ public class AlquilerController {
     }
 
     // --------- PAGO ---------
-
-    @PostMapping("/pago/registrar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<?> registrarPago(@RequestBody PagoAlquiler pago) {
-        try {
-            PagoAlquiler pagoGuardado = pagoAlquilerService.registrarPago(
-                    pago.getAlquiler().getIdAlquiler(),
-                    pago.getMontoPagado(),
-                    pago.getMetodoPago()
-            );
-            return ResponseEntity.ok(pagoGuardado);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 }
