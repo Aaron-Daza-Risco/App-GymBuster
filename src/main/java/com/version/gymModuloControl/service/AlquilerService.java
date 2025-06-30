@@ -18,7 +18,7 @@ import com.version.gymModuloControl.model.Empleado;
 import com.version.gymModuloControl.model.EstadoAlquiler;
 import com.version.gymModuloControl.model.PagoAlquiler;
 import com.version.gymModuloControl.model.Pieza;
-import com.version.gymModuloControl.repository.AlquilerInterface;
+import com.version.gymModuloControl.repository.AlquilerRepository;
 import com.version.gymModuloControl.repository.ClienteRepository;
 import com.version.gymModuloControl.repository.EmpleadoRepository;
 
@@ -28,7 +28,7 @@ import jakarta.transaction.Transactional;
 public class AlquilerService {
 
     @Autowired
-    private AlquilerInterface alquilerRepository;
+    private AlquilerRepository alquilerRepository;
 
     @Autowired
     private ClienteRepository clienteRepository;
@@ -155,9 +155,23 @@ public class AlquilerService {
         Alquiler alquiler = new Alquiler();
         alquiler.setCliente(cliente);
         alquiler.setEmpleado(empleadoActual);
-        alquiler.setFechaInicio(LocalDate.now());
-        alquiler.setFechaFin(alquilerCompletoDTO.getFechaFin() != null ? 
-                alquilerCompletoDTO.getFechaFin() : LocalDate.now().plusDays(7));
+        
+        // Establecer fechas asegurando que estén en el orden correcto
+        LocalDate hoy = LocalDate.now();
+        alquiler.setFechaInicio(hoy);
+        
+        // Verificar que la fecha de fin sea posterior a la fecha de inicio
+        LocalDate fechaFin = alquilerCompletoDTO.getFechaFin();
+        if (fechaFin == null || fechaFin.isBefore(hoy) || fechaFin.isEqual(hoy)) {
+            // Si la fecha es nula o anterior/igual a hoy, configurar para una semana después
+            fechaFin = hoy.plusDays(7);
+        }
+        alquiler.setFechaFin(fechaFin);
+        
+        // Imprimir fechas para depuración
+        System.out.println("Fecha inicio: " + hoy);
+        System.out.println("Fecha fin configurada: " + fechaFin);
+        
         alquiler.setEstado(EstadoAlquiler.ACTIVO);
         
         // 4. Guardar el alquiler para obtener un ID

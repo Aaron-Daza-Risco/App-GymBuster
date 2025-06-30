@@ -11,7 +11,7 @@ import com.version.gymModuloControl.dto.DetalleAlquilerDTO;
 import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.DetalleAlquiler;
 import com.version.gymModuloControl.model.Pieza;
-import com.version.gymModuloControl.repository.AlquilerInterface;
+import com.version.gymModuloControl.repository.AlquilerRepository;
 import com.version.gymModuloControl.repository.DetalleAlquilerInterface;
 import com.version.gymModuloControl.repository.PiezaRepository;
 
@@ -27,7 +27,7 @@ public class DetalleAlquilerService {
     private PiezaRepository piezaRepository;
 
     @Autowired
-    private AlquilerInterface alquilerRepository;
+    private AlquilerRepository alquilerRepository;
 
     @Transactional
     public DetalleAlquiler agregarDetalleAlquiler(Integer alquilerId, Integer piezaId, Integer cantidad) {
