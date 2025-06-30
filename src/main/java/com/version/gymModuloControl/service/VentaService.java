@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Service
@@ -78,21 +80,23 @@ public class VentaService {
             throw new IllegalArgumentException("Debe especificar un cliente válido para la venta.");
         }
 
-        // Obtener el empleado actual desde la sesión
         String nombreUsuario = SecurityContextHolder.getContext().getAuthentication().getName();
         Empleado empleadoActual = empleadoRepository.findByPersonaUsuarioNombreUsuario(nombreUsuario);
         if (empleadoActual == null) {
             throw new IllegalArgumentException("Empleado no encontrado para el usuario actual.");
         }
 
-        // Verificar que el cliente exista
         Cliente cliente = clienteRepository.findById(venta.getCliente().getIdCliente())
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado."));
 
         venta.setCliente(cliente);
         venta.setEmpleado(empleadoActual);
-        venta.setFecha(LocalDate.now());
-        venta.setHora(LocalTime.now());
+
+        // Usar fecha y hora de Perú
+        ZonedDateTime ahoraLima = ZonedDateTime.now(ZoneId.of("America/Lima"));
+        venta.setFecha(ahoraLima.toLocalDate());
+        venta.setHora(ahoraLima.toLocalTime());
+
         venta.setEstado(true);
 
         return ventaRepository.save(venta);
