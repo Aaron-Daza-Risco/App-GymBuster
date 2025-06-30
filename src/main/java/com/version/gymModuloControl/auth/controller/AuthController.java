@@ -21,6 +21,10 @@ import com.version.gymModuloControl.auth.dto.LoginRequest;
 import com.version.gymModuloControl.auth.dto.RegisterRequest;
 import com.version.gymModuloControl.auth.dto.UserSecurityDetailsDTO;
 import com.version.gymModuloControl.auth.service.AuthService;
+import com.version.gymModuloControl.auth.dto.ChangePasswordRequest;
+
+
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -56,7 +60,7 @@ public class AuthController {
                     .body("Error al obtener la lista de usuarios: " + e.getMessage());
         }
     }
-    
+
     @GetMapping("/usuarios/seguridad")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getUsersSecurityDetails() {
@@ -64,7 +68,7 @@ public class AuthController {
             List<UserSecurityDetailsDTO> securityDetails = authService.getUsersSecurityDetails();
             if (securityDetails.isEmpty()) {
                 // Si no hay datos, devolver una lista vacía pero con código 200 OK
-                return ResponseEntity.ok(securityDetails); 
+                return ResponseEntity.ok(securityDetails);
             }
             return ResponseEntity.ok(securityDetails);
         } catch (Exception e) {
@@ -80,14 +84,14 @@ public class AuthController {
     public ResponseEntity<?> toggleUserStatus(@PathVariable Long id, @RequestBody Map<String, Boolean> payload) {
         try {
             Boolean nuevoEstado = payload.get("estado");
-            
+
             // Validar que el estado no sea nulo
             if (nuevoEstado == null) {
                 return ResponseEntity.badRequest().body("El estado no puede ser nulo");
             }
-            
+
             System.out.println("Cambiando estado de usuario ID " + id + " a: " + (nuevoEstado ? "Activo" : "Inactivo"));
-            
+
             // Llamar al servicio para actualizar el estado
             ResponseEntity<?> result = authService.toggleUserStatus(id.intValue(), nuevoEstado);
             return result;
@@ -132,4 +136,23 @@ public class AuthController {
                     .body("Error al actualizar credenciales del usuario: " + e.getMessage());
         }
     }
+
+    // Endpoint para obtener el perfil del cliente autenticado
+    @GetMapping("/perfil")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<?> getPerfil(Authentication authentication) {
+        return authService.getPerfilCliente(authentication);
+    }
+
+    // Endpoint para cambiar la contraseña del cliente
+    @PostMapping("/perfil/cambiar-contrasena")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<?> cambiarContrasena(@RequestBody ChangePasswordRequest request, Authentication authentication) {
+        return authService.cambiarContrasenaCliente(request, authentication);
+    }
 }
+
+
+
+
+
