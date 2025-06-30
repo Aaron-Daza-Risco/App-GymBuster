@@ -42,4 +42,14 @@ public class EspecialidadService {
         especialidad.setEstado(nuevoEstado);
         return especialidadRepository.save(especialidad);
     }
+
+    @Transactional
+    public boolean eliminarEspecialidad(Integer idEspecialidad) {
+        if (especialidadRepository.existsById(idEspecialidad)) {
+            especialidadRepository.deleteById(idEspecialidad);
+            return true;
+        }
+        return false;
+    }
+
 }
