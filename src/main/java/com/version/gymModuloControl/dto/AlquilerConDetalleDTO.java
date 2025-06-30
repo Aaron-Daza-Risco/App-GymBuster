@@ -6,8 +6,8 @@ import java.util.List;
 
 import com.version.gymModuloControl.model.EstadoAlquiler;
 
-import lombok.Data;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
