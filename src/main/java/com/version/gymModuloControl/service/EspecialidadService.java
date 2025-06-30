@@ -1,6 +1,9 @@
 package com.version.gymModuloControl.service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,5 +44,22 @@ public class EspecialidadService {
         
         especialidad.setEstado(nuevoEstado);
         return especialidadRepository.save(especialidad);
+    }
+    
+    /**
+     * Devuelve una lista simplificada de especialidades con solo los datos esenciales
+     * para evitar problemas de serialización JSON
+     */
+    public List<Map<String, Object>> listarEspecialidadesBasico() {
+        return especialidadRepository.findAll().stream()
+            .map(especialidad -> {
+                Map<String, Object> esp = new HashMap<>();
+                esp.put("id", especialidad.getId());
+                esp.put("nombre", especialidad.getNombre());
+                esp.put("descripcion", especialidad.getDescripcion());
+                esp.put("estado", especialidad.getEstado());
+                return esp;
+            })
+            .collect(Collectors.toList());
     }
 }

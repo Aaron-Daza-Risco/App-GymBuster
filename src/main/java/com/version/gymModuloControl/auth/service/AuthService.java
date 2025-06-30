@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.version.gymModuloControl.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.version.gymModuloControl.auth.dto.ChangePasswordRequest;
 import com.version.gymModuloControl.auth.dto.JwtResponse;
 import com.version.gymModuloControl.auth.dto.LoginRequest;
 import com.version.gymModuloControl.auth.dto.RegisterRequest;
@@ -46,7 +46,7 @@ import com.version.gymModuloControl.repository.PersonaRepository;
 import com.version.gymModuloControl.repository.RolRepository;
 import com.version.gymModuloControl.repository.UsuarioRepository;
 import com.version.gymModuloControl.repository.UsuarioRolRepository;
-import com.version.gymModuloControl.auth.dto.ChangePasswordRequest;
+import com.version.gymModuloControl.service.EmailService;
 
 
 @Service
@@ -127,20 +127,30 @@ public class AuthService {
 
     @Transactional
     public ResponseEntity<?> register(RegisterRequest request, Authentication authentication) {
-        // Verificar si existe el usuario
-        if (usuarioRepository.findByNombreUsuario(request.getNombreUsuario()).isPresent()) {
-            return ResponseEntity.badRequest().body("Error: El nombre de usuario ya existe.");
-        }
+        try {
+            System.out.println("======= INICIO PROCESO REGISTRO =======");
+            System.out.println("Datos de registro: Usuario=" + request.getNombreUsuario() +
+                            ", Rol=" + request.getRol() +
+                            ", Nombre=" + request.getNombre() + 
+                            " " + request.getApellidos());
+                            
+            // Verificar si existe el usuario
+            if (usuarioRepository.findByNombreUsuario(request.getNombreUsuario()).isPresent()) {
+                System.out.println("Error: El nombre de usuario ya existe: " + request.getNombreUsuario());
+                return ResponseEntity.badRequest().body("Error: El nombre de usuario ya existe.");
+            }
 
-        // Obtener rol del usuario autenticado
-        String rolActual = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .findFirst()
-                .orElse("")
-                .replace("ROLE_", "");
+            // Obtener rol del usuario autenticado
+            String rolActual = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .findFirst()
+                    .orElse("")
+                    .replace("ROLE_", "");
+                    
+            System.out.println("Rol del usuario autenticado: " + rolActual);
 
-        // Validar si el rol solicitado puede ser creado por el rol actual
-        String rolSolicitado = request.getRol().toUpperCase();
+            // Validar si el rol solicitado puede ser creado por el rol actual
+            String rolSolicitado = request.getRol().toUpperCase();
 
         if (rolActual.equals("ADMIN")) {
             if (!List.of("ENTRENADOR", "RECEPCIONISTA", "CLIENTE").contains(rolSolicitado)) {
@@ -235,15 +245,50 @@ public class AuthService {
 
             // Si es entrenador y se proporcionaron especialidades, asignarlas
             if (rolSolicitado.equals("ENTRENADOR") && request.getEspecialidadesIds() != null) {
-                asignarEspecialidades(empleado.getIdEmpleado(), request.getEspecialidadesIds());
+                System.out.println("Intentando asignar especialidades al entrenador ID: " + empleado.getIdEmpleado());
+                System.out.println("Especialidades a asignar: " + request.getEspecialidadesIds());
+                
+                try {
+                    // Asegurarnos de que el empleado esté completamente persistido antes de asignar especialidades
+                    entityManager.flush();
+                    
+                    // Asignar especialidades directamente, sin usar el método que podría estar fallando
+                    List<Especialidad> especialidades = especialidadRepository.findAllById(request.getEspecialidadesIds());
+                    System.out.println("Especialidades encontradas: " + especialidades.size());
+                    
+                    for (Especialidad especialidad : especialidades) {
+                        InstructorEspecialidad instructorEspecialidad = new InstructorEspecialidad();
+                        instructorEspecialidad.setEmpleado(empleado);
+                        instructorEspecialidad.setEspecialidad(especialidad);
+                        instructorEspecialidad.setEstado(true);
+                        instructorEspecialidadRepository.save(instructorEspecialidad);
+                        System.out.println("Asignada especialidad ID: " + especialidad.getId() + 
+                                           " al empleado ID: " + empleado.getIdEmpleado());
+                    }
+                    
+                    // Flush para asegurar que se guarden todas las relaciones
+                    entityManager.flush();
+                } catch (Exception e) {
+                    System.err.println("Error al asignar especialidades: " + e.getMessage());
+                    e.printStackTrace();
+                    // Continuar con el registro aunque falle la asignación de especialidades
+                }
             }
         }
 
         Map<String, Object> response = new HashMap<>();
         response.put("mensaje", "Usuario registrado exitosamente");
         response.put("usuarioId", usuario.getId());
-
+        
+        System.out.println("======= FIN PROCESO REGISTRO EXITOSO =======");
         return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("======= ERROR EN PROCESO REGISTRO =======");
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace(); // Solo para desarrollo
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .body("Error al registrar usuario: " + e.getMessage());
+        }
     }
 
     // Método para obtener detalles de seguridad de todos los usuarios
@@ -286,6 +331,17 @@ public class AuthService {
                 userDTO.put("apellidos", usuario.getPersona().getApellidos());
                 userDTO.put("dni", usuario.getPersona().getDni());
                 userDTO.put("correo", usuario.getPersona().getCorreo());
+
+                // Buscar si es empleado o cliente y agregar el ID correspondiente
+                Optional<Empleado> empleado = empleadoRepository.findByPersona(usuario.getPersona());
+                if (empleado.isPresent()) {
+                    userDTO.put("idEmpleado", empleado.get().getIdEmpleado());
+                } else {
+                    Optional<Cliente> cliente = clienteRepository.findByPersona(usuario.getPersona());
+                    if (cliente.isPresent()) {
+                        userDTO.put("idCliente", cliente.get().getIdCliente());
+                    }
+                }
             }
 
             return userDTO;
@@ -334,33 +390,88 @@ public class AuthService {
 
     @Transactional
     public ResponseEntity<?> asignarEspecialidades(Integer empleadoId, List<Integer> especialidadesIds) {
-        Empleado empleado = empleadoRepository.findById(empleadoId)
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado"));
-
-        // Verificar que el empleado sea un entrenador
-        boolean esEntrenador = empleado.getPersona().getUsuario().getUsuarioRoles().stream()
-                .anyMatch(ur -> ur.getRol().getNombre().equals("ENTRENADOR"));
-
-        if (!esEntrenador) {
-            return ResponseEntity.badRequest()
-                    .body("Solo se pueden asignar especialidades a entrenadores");
+        try {
+            System.out.println("Iniciando asignación de especialidades para empleado ID: " + empleadoId);
+            System.out.println("Especialidades IDs a asignar: " + especialidadesIds);
+            
+            Empleado empleado = empleadoRepository.findById(empleadoId)
+                    .orElseThrow(() -> new RuntimeException("Empleado no encontrado"));
+    
+            // Verificar que el empleado sea un entrenador
+            boolean esEntrenador = empleado.getPersona().getUsuario().getUsuarioRoles().stream()
+                    .anyMatch(ur -> ur.getRol().getNombre().equals("ENTRENADOR"));
+    
+            if (!esEntrenador) {
+                System.out.println("Error: El empleado ID " + empleadoId + " no es un entrenador");
+                return ResponseEntity.badRequest()
+                        .body("Solo se pueden asignar especialidades a entrenadores");
+            }
+    
+            // Validar que hay especialidades para asignar
+            if (especialidadesIds == null || especialidadesIds.isEmpty()) {
+                System.out.println("Error: No se proporcionaron especialidades para asignar");
+                return ResponseEntity.badRequest().body("Debe proporcionar al menos una especialidad para asignar");
+            }
+            
+            // Asegurar que todas las transacciones anteriores estén confirmadas
+            entityManager.flush();
+            
+            // Eliminar especialidades existentes de forma segura (primera query JPQL, luego eliminar entidades)
+            List<InstructorEspecialidad> especialidadesExistentes = instructorEspecialidadRepository.findAll().stream()
+                .filter(ie -> ie.getEmpleado().getIdEmpleado().equals(empleadoId))
+                .toList();
+                
+            if (!especialidadesExistentes.isEmpty()) {
+                System.out.println("Eliminando " + especialidadesExistentes.size() + " especialidades existentes");
+                instructorEspecialidadRepository.deleteAll(especialidadesExistentes);
+                entityManager.flush(); // Confirmar la eliminación antes de insertar nuevas
+            } else {
+                System.out.println("No se encontraron especialidades existentes para este empleado");
+            }
+    
+            // Asignar nuevas especialidades
+            List<Especialidad> especialidades = especialidadRepository.findAllById(especialidadesIds);
+            
+            if (especialidades.isEmpty()) {
+                System.out.println("Error: Las especialidades con IDs " + especialidadesIds + " no existen");
+                return ResponseEntity.badRequest().body("Las especialidades proporcionadas no existen");
+            }
+            
+            System.out.println("Encontradas " + especialidades.size() + " especialidades para asignar");
+    
+            // Guardar las nuevas relaciones en la base de datos una por una
+            int asignadas = 0;
+            for (Especialidad especialidad : especialidades) {
+                try {
+                    InstructorEspecialidad instructorEspecialidad = new InstructorEspecialidad();
+                    instructorEspecialidad.setEmpleado(empleado);
+                    instructorEspecialidad.setEspecialidad(especialidad);
+                    instructorEspecialidad.setEstado(true);
+                    
+                    InstructorEspecialidad saved = instructorEspecialidadRepository.save(instructorEspecialidad);
+                    entityManager.flush(); // Confirmar cada inserción
+                    
+                    if (saved != null && saved.getIdInstructorEspecialidad() != null) {
+                        System.out.println("Asignada especialidad [" + especialidad.getId() + "] " + 
+                                         especialidad.getNombre() + " al empleado " + empleado.getIdEmpleado());
+                        asignadas++;
+                    } else {
+                        System.out.println("Advertencia: No se confirmó el guardado de la especialidad " + 
+                                         especialidad.getId());
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error al asignar especialidad " + especialidad.getId() + ": " + e.getMessage());
+                }
+            }
+            
+            System.out.println("Asignación completada. Total asignadas: " + asignadas + " de " + especialidades.size());
+    
+            return ResponseEntity.ok("Especialidades asignadas correctamente: " + asignadas);
+        } catch (Exception e) {
+            System.err.println("Error grave al asignar especialidades: " + e.getMessage());
+            e.printStackTrace(); // Solo para debug
+            return ResponseEntity.status(500).body("Error al asignar especialidades: " + e.getMessage());
         }
-
-        // Eliminar especialidades existentes
-        instructorEspecialidadRepository.deleteByEmpleado(empleado);
-
-        // Asignar nuevas especialidades
-        List<Especialidad> especialidades = especialidadRepository.findAllById(especialidadesIds);
-
-        for (Especialidad especialidad : especialidades) {
-            InstructorEspecialidad instructorEspecialidad = new InstructorEspecialidad();
-            instructorEspecialidad.setEmpleado(empleado);
-            instructorEspecialidad.setEspecialidad(especialidad);
-            instructorEspecialidad.setEstado(true);
-            instructorEspecialidadRepository.save(instructorEspecialidad);
-        }
-
-        return ResponseEntity.ok("Especialidades asignadas correctamente");
     }
 
     public ResponseEntity<?> getCurrentUserInfo(Authentication authentication) {
@@ -616,6 +727,60 @@ public class AuthService {
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
 
+    public ResponseEntity<?> getUserDetails(Integer id) {
+        try {
+            return usuarioRepository.findById(id)
+                    .map(usuario -> {
+                        Map<String, Object> userDetails = new HashMap<>();
+                        userDetails.put("id", usuario.getId());
+                        userDetails.put("nombreUsuario", usuario.getNombreUsuario());
+                        userDetails.put("estado", usuario.getEstado());
+                        userDetails.put("ultimoAcceso", usuario.getUltimoAcceso());
+
+                        // Obtener los roles del usuario
+                        List<String> roles = usuario.getUsuarioRoles().stream()
+                                .map(usuarioRol -> usuarioRol.getRol().getNombre())
+                                .collect(Collectors.toList());
+                        userDetails.put("roles", roles);
+
+                        // Añadir información de la persona
+                        if (usuario.getPersona() != null) {
+                            Persona persona = usuario.getPersona();
+                            userDetails.put("nombre", persona.getNombre());
+                            userDetails.put("apellidos", persona.getApellidos());
+                            userDetails.put("dni", persona.getDni());
+                            userDetails.put("correo", persona.getCorreo());
+                            userDetails.put("genero", persona.getGenero());
+                            userDetails.put("celular", persona.getCelular());
+                            userDetails.put("fechaNacimiento", persona.getFechaNacimiento());
+
+                            // Buscar si la persona es un empleado
+                            Optional<Empleado> empleado = empleadoRepository.findByPersonaIdPersona(persona.getIdPersona());
+                            if (empleado.isPresent()) {
+                                userDetails.put("ruc", empleado.get().getRuc());
+                                userDetails.put("salario", empleado.get().getSalario());
+                                userDetails.put("fechaContratacion", empleado.get().getFechaContratacion());
+                                userDetails.put("tipoInstructor", empleado.get().getTipoInstructor());
+                            } else {
+                                // Si no es empleado, buscar si es cliente
+                                Optional<Cliente> cliente = clienteRepository.findByPersona(persona);
+                                if (cliente.isPresent()) {
+                                    userDetails.put("direccion", cliente.get().getDireccion());
+                                    userDetails.put("fechaRegistro", cliente.get().getFechaRegistro());
+                                }
+                            }
+                        }
+
+                        return ResponseEntity.ok(userDetails);
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            System.err.println("Error al obtener detalles del usuario: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener detalles del usuario: " + e.getMessage());
+        }
+    }
 
 }
 

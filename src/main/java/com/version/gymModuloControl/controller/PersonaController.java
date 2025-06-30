@@ -82,4 +82,16 @@ public class PersonaController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    @GetMapping("/empleados/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> obtenerEmpleado(@PathVariable Integer id) {
+        return personaService.obtenerEmpleado(id);
+    }
+
+    @GetMapping("/clientes/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> obtenerCliente(@PathVariable Integer id) {
+        return personaService.obtenerCliente(id);
+    }
 }
