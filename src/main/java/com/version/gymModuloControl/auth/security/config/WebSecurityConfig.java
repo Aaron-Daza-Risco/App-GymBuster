@@ -56,6 +56,10 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/auth/usuarios/*/estado").hasRole("ADMIN") 
                         .requestMatchers("/api/auth/usuarios/*/rol").hasRole("ADMIN")
                         .requestMatchers("/api/auth/me").authenticated()
+
+                        .requestMatchers("/api/auth/perfil").hasRole("CLIENTE")
+                        .requestMatchers("/api/auth/perfil/cambiar-contrasena").hasRole("CLIENTE")
+
                         .requestMatchers("/api/persona/registrar-cliente").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/registrar-empleado").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/persona/listar-clientes").hasAnyRole("ADMIN", "RECEPCIONISTA")
