@@ -82,4 +82,28 @@ public class PersonaController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    @GetMapping("/empleados/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> obtenerEmpleado(@PathVariable Integer id) {
+        return personaService.obtenerEmpleado(id);
+    }
+
+    @GetMapping("/clientes/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> obtenerCliente(@PathVariable Integer id) {
+        return personaService.obtenerCliente(id);
+    }
+
+    @GetMapping("/usuario/{userId}/cliente")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> obtenerClientePorUsuarioId(@PathVariable Integer userId) {
+        return personaService.obtenerClientePorUsuarioId(userId);
+    }
+
+    @GetMapping("/usuario/{userId}/empleado")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> obtenerEmpleadoPorUsuarioId(@PathVariable Integer userId) {
+        return personaService.obtenerEmpleadoPorUsuarioId(userId);
+    }
 }

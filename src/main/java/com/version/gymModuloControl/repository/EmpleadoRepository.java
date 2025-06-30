@@ -7,11 +7,12 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.version.gymModuloControl.model.Empleado;
+import com.version.gymModuloControl.model.Persona;
 
 public interface EmpleadoRepository extends JpaRepository<Empleado, Integer> {
     List<Empleado> findByEstado(Boolean estado);
     List<Empleado> findByTipoInstructorIsNotNull();
     Empleado findByPersonaUsuarioNombreUsuario(String nombreUsuario);
     Optional<Empleado> findByPersonaIdPersona(Integer idPersona);
-
+    Optional<Empleado> findByPersona(Persona persona);
 }

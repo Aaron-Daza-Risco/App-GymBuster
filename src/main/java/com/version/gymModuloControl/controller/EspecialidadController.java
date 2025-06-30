@@ -1,7 +1,5 @@
 package com.version.gymModuloControl.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,11 +16,18 @@ public class EspecialidadController {
     @Autowired
     private EspecialidadService especialidadService;
 
-    @GetMapping("/listar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
-    public ResponseEntity<List<Especialidad>> listarEspecialidades() {
-        List<Especialidad> especialidades = especialidadService.listarTodos();
-        return ResponseEntity.ok(especialidades);
+  
+    
+    @GetMapping("/listar-basico")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA', 'ENTRENADOR')")
+    public ResponseEntity<?> listarEspecialidadesBasico() {
+        try {
+            return ResponseEntity.ok(especialidadService.listarEspecialidadesBasico());
+        } catch (Exception e) {
+            System.err.println("Error al listar especialidades básico: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error al listar especialidades: " + e.getMessage());
+        }
     }
 
     @PostMapping("/guardar")
