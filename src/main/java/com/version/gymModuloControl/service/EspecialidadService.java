@@ -45,6 +45,7 @@ public class EspecialidadService {
         especialidad.setEstado(nuevoEstado);
         return especialidadRepository.save(especialidad);
     }
+
     
     /**
      * Devuelve una lista simplificada de especialidades con solo los datos esenciales
@@ -62,4 +63,16 @@ public class EspecialidadService {
             })
             .collect(Collectors.toList());
     }
+
+
+    @Transactional
+    public boolean eliminarEspecialidad(Integer idEspecialidad) {
+        if (especialidadRepository.existsById(idEspecialidad)) {
+            especialidadRepository.deleteById(idEspecialidad);
+            return true;
+        }
+        return false;
+    }
+
+
 }
