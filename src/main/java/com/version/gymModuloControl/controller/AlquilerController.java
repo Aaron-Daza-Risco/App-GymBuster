@@ -1,6 +1,8 @@
 package com.version.gymModuloControl.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
 import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.DetalleAlquiler;
 import com.version.gymModuloControl.model.EstadoAlquiler;
+import com.version.gymModuloControl.service.AlquilerSchedulerService;
 import com.version.gymModuloControl.service.AlquilerService;
 import com.version.gymModuloControl.service.DetalleAlquilerService;
 import com.version.gymModuloControl.service.PagoAlquilerService;
@@ -36,6 +39,9 @@ public class AlquilerController {
 
     @Autowired
     private PagoAlquilerService pagoAlquilerService;
+
+    @Autowired
+    private AlquilerSchedulerService alquilerSchedulerService;
 
     // --------- ALQUILER ---------
 
@@ -134,6 +140,20 @@ public class AlquilerController {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error al procesar la devolución: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/verificar-vencidos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> verificarAlquileresVencidos() {
+        try {
+            int cantidadActualizada = alquilerSchedulerService.verificarYActualizarAlquileresVencidos();
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Verificación de alquileres vencidos completada");
+            response.put("actualizados", cantidadActualizada);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al verificar alquileres vencidos: " + e.getMessage());
         }
     }
 

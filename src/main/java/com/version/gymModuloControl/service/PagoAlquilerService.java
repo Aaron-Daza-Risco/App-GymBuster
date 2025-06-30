@@ -2,7 +2,7 @@ package com.version.gymModuloControl.service;
 
 import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.PagoAlquiler;
-import com.version.gymModuloControl.repository.AlquilerInterface;
+import com.version.gymModuloControl.repository.AlquilerRepository;
 import com.version.gymModuloControl.repository.PagoAlquilerInterface;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ public class PagoAlquilerService {
     private PagoAlquilerInterface pagoAlquilerRepository;
 
     @Autowired
-    private AlquilerInterface alquilerRepository;
+    private AlquilerRepository alquilerRepository;
 
     @Transactional
     public PagoAlquiler registrarPago(Integer alquilerId, BigDecimal montoPagado, String metodoPago) {
