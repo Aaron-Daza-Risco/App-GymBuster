@@ -63,7 +63,10 @@ public class PersonaController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> actualizarCliente(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
         return personaService.actualizarDatosCliente(id, datos);
-    }    @PutMapping("/empleados/{id}")
+    }
+
+
+    @PutMapping("/empleados/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<?> actualizarEmpleado(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
         try {

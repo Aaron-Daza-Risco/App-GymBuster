@@ -35,7 +35,9 @@ public class Plan {
     private String nombre;
 
     @Column(columnDefinition = "TEXT")
-    private String descripcion;    private Boolean estado = true;    private BigDecimal precio;
+    private String descripcion;
+    private Boolean estado = true;
+    private BigDecimal precio;
     
     private Integer duracion;
     

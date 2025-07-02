@@ -2,7 +2,6 @@ package com.version.gymModuloControl.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,7 +17,8 @@ public class Inscripcion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idInscripcion;
 
-    private Boolean estado = true;
+    @Enumerated(EnumType.STRING)
+    private EstadoInscripcion estado = EstadoInscripcion.ACTIVO;
 
     @Column(name = "fecha_fin")
     private LocalDate fechaFin;
@@ -40,7 +40,7 @@ public class Inscripcion {
     private Cliente cliente;
 
     @ManyToOne
-    @JoinColumn(name = "recepcionista_id", nullable = false)
+    @JoinColumn(name = "recepcionista_id", nullable = true)
     private Empleado recepcionista;
 
     @OneToMany(mappedBy = "inscripcion", cascade = CascadeType.ALL)
@@ -50,5 +50,6 @@ public class Inscripcion {
     @JoinColumn(name = "desempeno_id", foreignKey = @ForeignKey(name = "inscripcion_ibfk_desempeno"))
     private Desempeno desempeno;
 
+    @OneToOne(mappedBy = "inscripcion", cascade = CascadeType.ALL)
+    private PagoInscripcion pago;
 }
-

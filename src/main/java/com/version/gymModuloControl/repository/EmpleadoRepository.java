@@ -4,6 +4,7 @@ package com.version.gymModuloControl.repository;
 import java.util.List;
 import java.util.Optional;
 
+import com.version.gymModuloControl.model.TipoInstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.version.gymModuloControl.model.Empleado;
@@ -15,4 +16,6 @@ public interface EmpleadoRepository extends JpaRepository<Empleado, Integer> {
     Empleado findByPersonaUsuarioNombreUsuario(String nombreUsuario);
     Optional<Empleado> findByPersonaIdPersona(Integer idPersona);
     Optional<Empleado> findByPersona(Persona persona);
+    List<Empleado> findByTipoInstructorAndEstadoTrueAndCupoMaximoGreaterThan(TipoInstructor tipoInstructor, int minCupo);
+    List<Empleado> findByTipoInstructorAndEstadoTrue(TipoInstructor tipoInstructor);
 }
