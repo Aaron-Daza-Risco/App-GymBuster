@@ -25,6 +25,8 @@ public class AlquilerConDetalleDTO {
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
     private Double total;
+    private Double mora;
+    private Double totalConMora;
     private EstadoAlquiler estado;
     private Integer idPago;
     private BigDecimal vuelto;

@@ -12,7 +12,7 @@ import com.version.gymModuloControl.model.Alquiler;
 import com.version.gymModuloControl.model.DetalleAlquiler;
 import com.version.gymModuloControl.model.Pieza;
 import com.version.gymModuloControl.repository.AlquilerRepository;
-import com.version.gymModuloControl.repository.DetalleAlquilerInterface;
+import com.version.gymModuloControl.repository.DetalleAlquilerRepository;
 import com.version.gymModuloControl.repository.PiezaRepository;
 
 import jakarta.transaction.Transactional;
@@ -21,7 +21,7 @@ import jakarta.transaction.Transactional;
 public class DetalleAlquilerService {
 
     @Autowired
-    private DetalleAlquilerInterface detalleAlquilerRepository;
+    private DetalleAlquilerRepository detalleAlquilerRepository;
 
     @Autowired
     private PiezaRepository piezaRepository;
@@ -48,8 +48,16 @@ public class DetalleAlquilerService {
             throw new IllegalArgumentException("Stock insuficiente para la pieza: " + pieza.getNombre());
         }
 
-        // Calcular subtotal
-        BigDecimal subtotal = pieza.getPrecioAlquiler().multiply(BigDecimal.valueOf(cantidad));
+        // Calcular número de días del alquiler
+        long diasAlquiler = java.time.temporal.ChronoUnit.DAYS.between(alquiler.getFechaInicio(), alquiler.getFechaFin());
+        if (diasAlquiler <= 0) {
+            diasAlquiler = 1; // Mínimo 1 día
+        }
+
+        // Calcular subtotal: precio_diario × cantidad × días
+        BigDecimal subtotal = pieza.getPrecioAlquiler()
+                .multiply(BigDecimal.valueOf(cantidad))
+                .multiply(BigDecimal.valueOf(diasAlquiler));
 
         // Crear detalle
         DetalleAlquiler detalle = new DetalleAlquiler();

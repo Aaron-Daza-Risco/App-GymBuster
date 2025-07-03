@@ -1,5 +1,6 @@
 package com.version.gymModuloControl.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -27,6 +28,8 @@ public class AlquilerSchedulerService {
      * Tarea programada para revisar alquileres vencidos.
      * Se ejecuta cada minuto
      */
+    private static final BigDecimal MORA_POR_DIA = new BigDecimal("0.10");
+
     @Scheduled(cron = "0 0/1 * * * ?")
     @Transactional
     public void actualizarAlquileresVencidos() {
@@ -40,11 +43,20 @@ public class AlquilerSchedulerService {
         
         logger.info("Se encontraron {} alquileres vencidos para actualizar", alquileresVencidos.size());
         
-        // Actualizar el estado de cada alquiler vencido
+        // Actualizar el estado de cada alquiler vencido y calcular mora
         for (Alquiler alquiler : alquileresVencidos) {
+            // Calcular días de retraso
+            long diasRetraso = java.time.temporal.ChronoUnit.DAYS.between(alquiler.getFechaFin(), fechaActual);
+            
+            // Calcular mora (0.10 soles por día de retraso)
+            BigDecimal mora = MORA_POR_DIA.multiply(new BigDecimal(diasRetraso));
+            
             alquiler.setEstado(EstadoAlquiler.VENCIDO);
+            alquiler.setMora(mora);
             alquilerRepository.save(alquiler);
-            logger.info("Alquiler ID {} marcado como VENCIDO", alquiler.getIdAlquiler());
+            
+            logger.info("Alquiler ID {} marcado como VENCIDO con mora de S/. {}", 
+                alquiler.getIdAlquiler(), mora);
         }
         
         logger.info("Tarea de actualización de alquileres vencidos completada");

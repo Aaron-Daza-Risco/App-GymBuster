@@ -2,11 +2,14 @@ package com.version.gymModuloControl.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.version.gymModuloControl.dto.AlquilerCompletoDTO;
 import com.version.gymModuloControl.dto.AlquilerConDetalleDTO;
@@ -21,8 +24,7 @@ import com.version.gymModuloControl.model.Pieza;
 import com.version.gymModuloControl.repository.AlquilerRepository;
 import com.version.gymModuloControl.repository.ClienteRepository;
 import com.version.gymModuloControl.repository.EmpleadoRepository;
-
-import jakarta.transaction.Transactional;
+import com.version.gymModuloControl.repository.PagoAlquilerRepository;
 
 @Service
 public class AlquilerService {
@@ -37,6 +39,9 @@ public class AlquilerService {
     private EmpleadoRepository empleadoRepository;
 
     @Autowired
+    private PagoAlquilerRepository pagoAlquilerRepository;
+
+    @Autowired
     private DetalleAlquilerService detalleAlquilerService;
 
     @Autowired
@@ -47,6 +52,17 @@ public class AlquilerService {
                 .orElseThrow(() -> new IllegalArgumentException("Alquiler no encontrado"));
 
         PagoAlquiler pagoAlquiler = alquiler.getPago();
+        
+        // Calcular mora si el alquiler está vencido
+        double mora = 0.0;
+        double total = alquiler.getTotal() != null ? alquiler.getTotal().doubleValue() : 0.0;
+        
+        if (alquiler.getEstado() == EstadoAlquiler.VENCIDO) {
+            long diasRetraso = java.time.temporal.ChronoUnit.DAYS.between(alquiler.getFechaFin(), LocalDate.now());
+            mora = diasRetraso * 0.10; // 0.10 soles por día de retraso
+        }
+        
+        double totalConMora = total + mora;
 
         return new AlquilerConDetalleDTO(
                 alquiler.getIdAlquiler(),
@@ -58,20 +74,32 @@ public class AlquilerService {
                 alquiler.getEmpleado().getPersona().getDni(),
                 alquiler.getFechaInicio(),
                 alquiler.getFechaFin(),
-                alquiler.getTotal() != null ? alquiler.getTotal().doubleValue() : 0.0,
+                total,
+                mora,
+                totalConMora,
                 alquiler.getEstado(),
                 pagoAlquiler != null ? pagoAlquiler.getIdPago() : null,
                 pagoAlquiler != null ? pagoAlquiler.getVuelto() : null,
                 pagoAlquiler != null ? pagoAlquiler.getMontoPagado() : null,
                 pagoAlquiler != null ? pagoAlquiler.getMetodoPago() : null,
-                alquiler.getDetalles().stream().map(detalle -> new DetalleAlquilerDTO(
+                alquiler.getDetalles().stream().map(detalle -> {
+                    // Calcular días del alquiler
+                    long diasAlquiler = java.time.temporal.ChronoUnit.DAYS.between(
+                        alquiler.getFechaInicio(), alquiler.getFechaFin());
+                    if (diasAlquiler <= 0) {
+                        diasAlquiler = 1; // Mínimo 1 día
+                    }
+                    
+                    return new DetalleAlquilerDTO(
                         detalle.getIdDetalleAlquiler(),
                         detalle.getPieza().getIdPieza(),
                         detalle.getPieza().getNombre(),
                         detalle.getCantidad(),
                         detalle.getPrecioUnitario().doubleValue(),
-                        detalle.getSubtotal().doubleValue()
-                )).toList()
+                        detalle.getSubtotal().doubleValue(),
+                        (int) diasAlquiler
+                    );
+                }).toList()
         );
     }
 
@@ -130,6 +158,15 @@ public class AlquilerService {
             // No necesitamos guardar la pieza aquí, se guardará automáticamente con la transacción
         }
         
+        // Si el alquiler está vencido, calcular y agregar la mora al total
+        if (alquiler.getEstado() == EstadoAlquiler.VENCIDO) {
+            long diasRetraso = java.time.temporal.ChronoUnit.DAYS.between(alquiler.getFechaFin(), LocalDate.now());
+            BigDecimal mora = new BigDecimal("0.10").multiply(new BigDecimal(diasRetraso));
+            BigDecimal totalConMora = alquiler.getTotal().add(mora);
+            alquiler.setMora(mora);
+            alquiler.setTotal(totalConMora);
+        }
+        
         // Marcar el alquiler como finalizado (devuelto)
         alquiler.setEstado(EstadoAlquiler.FINALIZADO);
         
@@ -140,18 +177,14 @@ public class AlquilerService {
     // Método para crear un alquiler completo en una sola transacción
     @Transactional
     public AlquilerConDetalleDTO crearAlquilerCompleto(AlquilerCompletoDTO alquilerCompletoDTO) {
-        // 1. Obtener el empleado actual desde la sesión
-        String nombreUsuario = SecurityContextHolder.getContext().getAuthentication().getName();
-        Empleado empleadoActual = empleadoRepository.findByPersonaUsuarioNombreUsuario(nombreUsuario);
-        if (empleadoActual == null) {
-            throw new IllegalArgumentException("Empleado no encontrado para el usuario actual.");
-        }
+        // 1. Obtener el empleado actual del contexto de seguridad
+        Empleado empleadoActual = obtenerEmpleadoActual();
 
-        // 2. Verificar que el cliente exista
+        // 2. Validar cliente
         Cliente cliente = clienteRepository.findById(alquilerCompletoDTO.getClienteId())
-                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado"));
 
-        // 3. Crear y guardar el alquiler
+        // 3. Preparar el alquiler
         Alquiler alquiler = new Alquiler();
         alquiler.setCliente(cliente);
         alquiler.setEmpleado(empleadoActual);
@@ -160,18 +193,23 @@ public class AlquilerService {
         LocalDate hoy = LocalDate.now();
         alquiler.setFechaInicio(hoy);
         
-        // Verificar que la fecha de fin sea posterior a la fecha de inicio
+        // Verificar que la fecha de fin sea posterior a la fecha de inicio y no más de 30 días
         LocalDate fechaFin = alquilerCompletoDTO.getFechaFin();
         if (fechaFin == null || fechaFin.isBefore(hoy) || fechaFin.isEqual(hoy)) {
             // Si la fecha es nula o anterior/igual a hoy, configurar para una semana después
             fechaFin = hoy.plusDays(7);
         }
+        
+        // Calcular la diferencia de días
+        long diasAlquiler = ChronoUnit.DAYS.between(hoy, fechaFin);
+        if (diasAlquiler > 30) {
+            throw new IllegalArgumentException("El período de alquiler no puede exceder los 30 días");
+        }
+        if (diasAlquiler < 1) {
+            throw new IllegalArgumentException("El período de alquiler debe ser de al menos 1 día");
+        }
+        
         alquiler.setFechaFin(fechaFin);
-        
-        // Imprimir fechas para depuración
-        System.out.println("Fecha inicio: " + hoy);
-        System.out.println("Fecha fin configurada: " + fechaFin);
-        
         alquiler.setEstado(EstadoAlquiler.ACTIVO);
         
         // 4. Guardar el alquiler para obtener un ID
@@ -199,7 +237,8 @@ public class AlquilerService {
         alquiler.setTotal(total);
         
         // 6. Registrar el pago
-        if (alquilerCompletoDTO.getMontoPagado() != null && !alquilerCompletoDTO.getMetodoPago().isEmpty()) {
+        if (alquilerCompletoDTO.getMontoPagado() != null && alquilerCompletoDTO.getMetodoPago() != null && 
+            !alquilerCompletoDTO.getMetodoPago().isEmpty()) {
             PagoAlquiler pago = pagoAlquilerService.registrarPago(
                 alquiler.getIdAlquiler(),
                 alquilerCompletoDTO.getMontoPagado(),
@@ -213,5 +252,18 @@ public class AlquilerService {
         
         // 8. Devolver el DTO con toda la información
         return obtenerAlquilerConDetalle(alquiler.getIdAlquiler());
+    }
+
+    private Empleado obtenerEmpleadoActual() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("No hay usuario autenticado");
+        }
+        String username = authentication.getName();
+        Empleado empleadoActual = empleadoRepository.findByPersonaUsuarioNombreUsuario(username);
+        if (empleadoActual == null) {
+            throw new RuntimeException("No se encontró el empleado para el usuario: " + username);
+        }
+        return empleadoActual;
     }
 }
