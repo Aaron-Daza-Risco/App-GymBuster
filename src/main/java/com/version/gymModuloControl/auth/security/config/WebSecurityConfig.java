@@ -106,6 +106,11 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/inscripciones/instructores-disponibles/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/inscripciones/horarios-instructor/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/inscripciones/pago/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/inscripciones/*/detalle").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/inscripciones/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/inscripciones/cancelar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/asistencia/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
 
                         .anyRequest().authenticated()
                 )

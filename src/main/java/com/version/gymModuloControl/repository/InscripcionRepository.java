@@ -17,6 +17,8 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Intege
 
     boolean existsByPlan_IdPlan(Integer idPlan);
     Optional<Inscripcion> findByClienteIdClienteAndFechaFinAfterAndEstadoTrue(Integer idCliente, LocalDate fecha);
+    Optional<Inscripcion> findTopByClienteIdClienteOrderByFechaInscripcionDesc(Integer idCliente);
+
 
 
 }

@@ -1,9 +1,6 @@
 package com.version.gymModuloControl.controller;
 
-import com.version.gymModuloControl.dto.HorarioInstructorDTO;
-import com.version.gymModuloControl.dto.InscripcionRequestDTO;
-import com.version.gymModuloControl.dto.InscripcionResponseDTO;
-import com.version.gymModuloControl.dto.InstructorDisponibleDTO;
+import com.version.gymModuloControl.dto.*;
 import com.version.gymModuloControl.model.Empleado;
 import com.version.gymModuloControl.model.Inscripcion;
 import com.version.gymModuloControl.model.PagoInscripcion;
@@ -61,6 +58,30 @@ public class InscripcionController {
             );
             return ResponseEntity.ok(pagoGuardado);
         } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/inscripciones/{id}/detalle")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<InscripcionConDetalleDTO> obtenerInscripcionConDetalle(@PathVariable Integer id) {
+        InscripcionConDetalleDTO dto = inscripcionService.obtenerInscripcionConDetalle(id);
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/listar")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public List<InscripcionConDetalleDTO> listarInscripciones() {
+        return inscripcionService.listarTodasLasInscripciones();
+    }
+
+    @PutMapping("/cancelar/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> cancelarInscripcion(@PathVariable Integer id) {
+        try {
+            inscripcionService.cancelarInscripcion(id);
+            return ResponseEntity.ok("Inscripción cancelada correctamente.");
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

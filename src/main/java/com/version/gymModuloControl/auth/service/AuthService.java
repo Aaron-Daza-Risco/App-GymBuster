@@ -82,9 +82,6 @@ public class AuthService {
     private EmpleadoRepository empleadoRepository;
 
     @Autowired
-    private EmailService emailService;
-
-    @Autowired
     private EspecialidadRepository especialidadRepository;
     @Autowired
     private InstructorEspecialidadRepository instructorEspecialidadRepository;
@@ -211,23 +208,6 @@ public class AuthService {
             cliente.setFechaRegistro(LocalDate.now());
             clienteRepository.save(cliente);
 
-            // Enviar correo de bienvenida
-            String correoCliente = persona.getCorreo();
-            String asunto = "¡Bienvenido a GYM APP!";
-            String cuerpo = "Hola " + persona.getNombre() + " " +persona.getApellidos() + ",\n\n" +
-                    "Te damos la bienvenida a *GYM APP* 🏋️‍♂️.\n\n" +
-                    "Tu cuenta ha sido creada correctamente.\n\n" +
-                    "👉 Usuario: " + usuario.getNombreUsuario() + "\n\n" +
-                    "Por seguridad, te recomendamos cambiar tu contraseña la primera vez que ingreses al sistema.\n\n" +
-                    "¡Ya puedes iniciar sesión y comenzar tu entrenamiento!\n\n" +
-                    "Gracias por confiar en nosotros 💪.";
-
-            try {
-                emailService.enviarCorreo(correoCliente, asunto, cuerpo);
-            } catch (Exception e) {
-                System.err.println("Error al enviar correo: " + e.getMessage());
-                // Continuar con el registro aunque falle el envío del correo
-            }
         } else {
             Empleado empleado = new Empleado();
             empleado.setPersona(persona);
