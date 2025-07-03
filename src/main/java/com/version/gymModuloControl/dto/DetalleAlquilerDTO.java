@@ -1,6 +1,6 @@
 package com.version.gymModuloControl.dto;
-import lombok.Data;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
@@ -12,7 +12,7 @@ public class DetalleAlquilerDTO {
     private Integer piezaId;
     private String piezaNombre;
     private Integer cantidad;
-    private Double precioUnitario;
-    private Double subtotal;
-
+    private Double precioUnitario; // Precio diario por pieza
+    private Double subtotal; // precio_diario × cantidad × días
+    private Integer diasAlquiler; // Número de días del alquiler
 }

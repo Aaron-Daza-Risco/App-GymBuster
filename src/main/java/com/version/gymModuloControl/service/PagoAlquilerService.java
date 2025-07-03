@@ -1,20 +1,21 @@
 package com.version.gymModuloControl.service;
 
-import com.version.gymModuloControl.model.Alquiler;
-import com.version.gymModuloControl.model.PagoAlquiler;
-import com.version.gymModuloControl.repository.AlquilerRepository;
-import com.version.gymModuloControl.repository.PagoAlquilerInterface;
-import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
+import com.version.gymModuloControl.model.Alquiler;
+import com.version.gymModuloControl.model.PagoAlquiler;
+import com.version.gymModuloControl.repository.AlquilerRepository;
+import com.version.gymModuloControl.repository.PagoAlquilerRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class PagoAlquilerService {
-
     @Autowired
-    private PagoAlquilerInterface pagoAlquilerRepository;
+    private PagoAlquilerRepository pagoAlquilerRepository;
 
     @Autowired
     private AlquilerRepository alquilerRepository;

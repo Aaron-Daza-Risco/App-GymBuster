@@ -30,6 +30,9 @@ public class Alquiler {
 
     private BigDecimal total;
 
+    @Column(name = "mora")
+    private BigDecimal mora = BigDecimal.ZERO;
+
     @ManyToOne
     @JoinColumn(name = "empleado_id", nullable = false)
     private Empleado empleado;
