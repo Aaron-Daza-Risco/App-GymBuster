@@ -6,8 +6,8 @@ import java.util.List;
 
 import com.version.gymModuloControl.model.EstadoAlquiler;
 
-import lombok.Data;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
@@ -25,6 +25,8 @@ public class AlquilerConDetalleDTO {
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
     private Double total;
+    private Double mora;
+    private Double totalConMora;
     private EstadoAlquiler estado;
     private Integer idPago;
     private BigDecimal vuelto;

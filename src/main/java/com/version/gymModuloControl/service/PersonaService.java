@@ -291,4 +291,151 @@ public class PersonaService {
         dto.put("cupoMaximo", empleado.getCupoMaximo());
         return dto;
     }
+
+    public ResponseEntity<?> obtenerEmpleado(Integer idUsuario) {
+        // Primero buscar el usuario
+        return personaRepository.findByUsuarioId(idUsuario)
+            .flatMap(persona -> empleadoRepository.findByPersona(persona))
+            .map(empleado -> {
+                Map<String, Object> empleadoMap = new HashMap<>();
+                Persona persona = empleado.getPersona();
+                
+                if (persona != null) {
+                    // Información básica del empleado
+                    empleadoMap.put("idEmpleado", empleado.getIdEmpleado());
+                    empleadoMap.put("estado", empleado.getEstado());
+                    empleadoMap.put("ruc", empleado.getRuc());
+                    empleadoMap.put("salario", empleado.getSalario());
+                    empleadoMap.put("fechaContratacion", empleado.getFechaContratacion());
+                    empleadoMap.put("tipoInstructor", empleado.getTipoInstructor() != null ? empleado.getTipoInstructor().toString() : null);
+                    empleadoMap.put("cupoMaximo", empleado.getCupoMaximo());
+
+                    // Información de la persona
+                    empleadoMap.put("nombre", persona.getNombre());
+                    empleadoMap.put("apellidos", persona.getApellidos());
+                    empleadoMap.put("dni", persona.getDni());
+                    empleadoMap.put("correo", persona.getCorreo());
+                    empleadoMap.put("celular", persona.getCelular());
+                    empleadoMap.put("genero", persona.getGenero());
+                    empleadoMap.put("fechaNacimiento", persona.getFechaNacimiento());
+
+                    // Información de roles
+                    if (persona.getUsuario() != null && persona.getUsuario().getUsuarioRoles() != null) {
+                        List<String> roles = persona.getUsuario().getUsuarioRoles().stream()
+                                .map(usuarioRol -> usuarioRol.getRol().getNombre())
+                                .collect(Collectors.toList());
+                        empleadoMap.put("roles", roles);
+                    }
+                }
+                
+                return ResponseEntity.ok(empleadoMap);
+            })
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    public ResponseEntity<?> obtenerCliente(Integer id) {
+        return clienteRepository.findById(id)
+            .map(cliente -> {
+                Map<String, Object> clienteMap = new HashMap<>();
+                Persona persona = cliente.getPersona();
+                
+                clienteMap.put("id", cliente.getIdCliente());
+                clienteMap.put("estado", cliente.getEstado());
+                clienteMap.put("direccion", cliente.getDireccion());
+                clienteMap.put("fechaRegistro", cliente.getFechaRegistro());
+
+                // Información de la persona
+                if (persona != null) {
+                    clienteMap.put("nombre", persona.getNombre());
+                    clienteMap.put("apellidos", persona.getApellidos());
+                    clienteMap.put("dni", persona.getDni());
+                    clienteMap.put("correo", persona.getCorreo());
+                    clienteMap.put("celular", persona.getCelular());
+                    clienteMap.put("genero", persona.getGenero());
+                    clienteMap.put("fechaNacimiento", persona.getFechaNacimiento());
+
+                    // Información de roles
+                    if (persona.getUsuario() != null && persona.getUsuario().getUsuarioRoles() != null) {
+                        List<String> roles = persona.getUsuario().getUsuarioRoles().stream()
+                                .map(usuarioRol -> usuarioRol.getRol().getNombre())
+                                .collect(Collectors.toList());
+                        clienteMap.put("roles", roles);
+                    }
+                }
+
+                return ResponseEntity.ok(clienteMap);
+            })
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    public ResponseEntity<?> obtenerClientePorUsuarioId(Integer userId) {
+        return personaRepository.findByUsuarioId(userId)
+            .map(persona -> clienteRepository.findByPersona(persona)
+                .map(cliente -> {
+                    Map<String, Object> clienteMap = new HashMap<>();
+                    // Información del cliente
+                    clienteMap.put("id", cliente.getIdCliente());
+                    clienteMap.put("direccion", cliente.getDireccion());
+                    clienteMap.put("fechaRegistro", cliente.getFechaRegistro());
+                    clienteMap.put("estado", cliente.getEstado());
+                    
+                    // Información de la persona
+                    clienteMap.put("nombre", persona.getNombre());
+                    clienteMap.put("apellidos", persona.getApellidos());
+                    clienteMap.put("dni", persona.getDni());
+                    clienteMap.put("correo", persona.getCorreo());
+                    clienteMap.put("celular", persona.getCelular());
+                    clienteMap.put("genero", persona.getGenero());
+                    clienteMap.put("fechaNacimiento", persona.getFechaNacimiento());
+                    
+                    // Información del usuario
+                    if (persona.getUsuario() != null) {
+                        clienteMap.put("nombreUsuario", persona.getUsuario().getNombreUsuario());
+                        clienteMap.put("roles", persona.getUsuario().getUsuarioRoles().stream()
+                            .map(rol -> rol.getRol().getNombre())
+                            .collect(Collectors.toList()));
+                    }
+                    
+                    return ResponseEntity.ok(clienteMap);
+                })
+                .orElse(ResponseEntity.notFound().build()))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    public ResponseEntity<?> obtenerEmpleadoPorUsuarioId(Integer userId) {
+        return personaRepository.findByUsuarioId(userId)
+            .map(persona -> empleadoRepository.findByPersona(persona)
+                .map(empleado -> {
+                    Map<String, Object> empleadoMap = new HashMap<>();
+                    // Información del empleado
+                    empleadoMap.put("id", empleado.getIdEmpleado());
+                    empleadoMap.put("ruc", empleado.getRuc());
+                    empleadoMap.put("salario", empleado.getSalario());
+                    empleadoMap.put("fechaContratacion", empleado.getFechaContratacion());
+                    empleadoMap.put("estado", empleado.getEstado());
+                    empleadoMap.put("tipoInstructor", empleado.getTipoInstructor() != null ? empleado.getTipoInstructor().toString() : null);
+                    empleadoMap.put("cupoMaximo", empleado.getCupoMaximo());
+                    
+                    // Información de la persona
+                    empleadoMap.put("nombre", persona.getNombre());
+                    empleadoMap.put("apellidos", persona.getApellidos());
+                    empleadoMap.put("dni", persona.getDni());
+                    empleadoMap.put("correo", persona.getCorreo());
+                    empleadoMap.put("celular", persona.getCelular());
+                    empleadoMap.put("genero", persona.getGenero());
+                    empleadoMap.put("fechaNacimiento", persona.getFechaNacimiento());
+                    
+                    // Información del usuario
+                    if (persona.getUsuario() != null) {
+                        empleadoMap.put("nombreUsuario", persona.getUsuario().getNombreUsuario());
+                        empleadoMap.put("roles", persona.getUsuario().getUsuarioRoles().stream()
+                            .map(rol -> rol.getRol().getNombre())
+                            .collect(Collectors.toList()));
+                    }
+                    
+                    return ResponseEntity.ok(empleadoMap);
+                })
+                .orElse(ResponseEntity.notFound().build()))
+            .orElse(ResponseEntity.notFound().build());
+    }
 }

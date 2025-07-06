@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.version.gymModuloControl.auth.dto.ChangePasswordRequest;
 import com.version.gymModuloControl.auth.dto.JwtResponse;
 import com.version.gymModuloControl.auth.dto.LoginRequest;
 import com.version.gymModuloControl.auth.dto.RegisterRequest;
 import com.version.gymModuloControl.auth.dto.UserSecurityDetailsDTO;
 import com.version.gymModuloControl.auth.service.AuthService;
-import com.version.gymModuloControl.auth.dto.ChangePasswordRequest;
 
 
 
@@ -149,6 +149,19 @@ public class AuthController {
     @PreAuthorize("hasRole('CLIENTE')")
     public ResponseEntity<?> cambiarContrasena(@RequestBody ChangePasswordRequest request, Authentication authentication) {
         return authService.cambiarContrasenaCliente(request, authentication);
+    }
+
+    @GetMapping("/usuarios/{id}/detalles")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUserDetails(@PathVariable Integer id) {
+        try {
+            return authService.getUserDetails(id);
+        } catch (Exception e) {
+            System.err.println("Error al obtener detalles del usuario: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener detalles del usuario: " + e.getMessage());
+        }
     }
 }
 

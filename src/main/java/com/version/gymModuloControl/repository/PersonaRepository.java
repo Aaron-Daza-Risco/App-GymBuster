@@ -11,5 +11,6 @@ public interface PersonaRepository extends JpaRepository<Persona, Integer> {
     Optional<Persona> findByCorreo(String correo);
     Optional<Persona> findByDni(String dni);
     List<Persona> findByNombreContainingOrApellidosContaining(String nombre, String apellidos);
+    Optional<Persona> findByUsuarioId(Integer usuarioId);
 }
 
