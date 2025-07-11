@@ -90,7 +90,7 @@ public class AsistenciaService {
                 .collect(Collectors.toList());
     }
 
-    @Scheduled(cron = "0 0 0 * * *") // Todos los días a las 00:00
+    @Scheduled(cron = "0 0 23 * * *")
     @Transactional(rollbackFor = Exception.class)
     public void registrarFaltasClientes() {
         LocalDate hoy = LocalDate.now();

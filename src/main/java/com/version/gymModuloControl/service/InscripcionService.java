@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -152,7 +153,8 @@ public class InscripcionService {
         inscripcion.setCliente(cliente);
         inscripcion.setPlan(plan);
         inscripcion.setFechaInscripcion(LocalDate.now());
-        inscripcion.setFechaInicio(request.getFechaInicio());
+        LocalDate fechaInicioPeru = LocalDate.now(ZoneId.of("America/Lima"));
+        inscripcion.setFechaInicio(fechaInicioPeru);
         inscripcion.setFechaFin(fechaFin);
         inscripcion.setMonto(request.getMonto());
         inscripcion.setEstado(EstadoInscripcion.ACTIVO);

@@ -111,6 +111,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/inscripciones/cancelar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/asistencia/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/dashboard-recepcionista").hasRole("RECEPCIONISTA")
 
                         .anyRequest().authenticated()
                 )
@@ -119,3 +120,4 @@ public class WebSecurityConfig {
         return http.build();
     }
 }
+
