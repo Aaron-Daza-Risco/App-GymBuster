@@ -54,13 +54,13 @@ public class PersonaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<?> actualizarPersona(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
         return personaService.actualizarDatosPersona(id, datos);
     }
 
     @PutMapping("/clientes/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
     public ResponseEntity<?> actualizarCliente(@PathVariable Integer id, @RequestBody Map<String, Object> datos) {
         return personaService.actualizarDatosCliente(id, datos);
     }

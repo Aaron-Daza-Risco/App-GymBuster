@@ -94,6 +94,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/venta/detalle/listar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/venta/detalle/eliminar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/venta/pago/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/venta/cancelar/**").hasAnyRole("ADMIN", "RECEPCIONISTA") // <-- Agrega esta línea
                         .requestMatchers("/api/pieza/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/pieza/guardar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/pieza/actualizar").hasAnyRole("ADMIN", "RECEPCIONISTA")

@@ -35,14 +35,22 @@ public class DashboardRecepcionistaService {
 
         // Ganancia diaria por alquileres
         BigDecimal gananciaAlquileres = alquilerRepository.findAll().stream()
-                .filter(a -> a.getEstado() == com.version.gymModuloControl.model.EstadoAlquiler.ACTIVO && hoy.equals(a.getFechaInicio()))
+                .filter(a -> (
+                        a.getEstado() == com.version.gymModuloControl.model.EstadoAlquiler.ACTIVO ||
+                                a.getEstado() == com.version.gymModuloControl.model.EstadoAlquiler.FINALIZADO ||
+                                a.getEstado() == com.version.gymModuloControl.model.EstadoAlquiler.VENCIDO
+                ) && hoy.equals(a.getFechaInicio()))
                 .map(a -> a.getTotal() != null ? a.getTotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setGananciaDiariaAlquileres(gananciaAlquileres);
 
-        // Ganancia diaria por inscripciones
+        // Ganancia diaria por inscripciones (ACTIVO, FINALIZADO, CANCELADO)
         BigDecimal gananciaInscripciones = inscripcionRepository.findAll().stream()
-                .filter(i -> i.getEstado() == com.version.gymModuloControl.model.EstadoInscripcion.ACTIVO && hoy.equals(i.getFechaInscripcion()))
+                .filter(i -> (
+                        i.getEstado() == com.version.gymModuloControl.model.EstadoInscripcion.ACTIVO ||
+                                i.getEstado() == com.version.gymModuloControl.model.EstadoInscripcion.FINALIZADO ||
+                                i.getEstado() == com.version.gymModuloControl.model.EstadoInscripcion.CANCELADO
+                ) && hoy.equals(i.getFechaInscripcion()))
                 .map(i -> i.getMonto() != null ? i.getMonto() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dto.setGananciaDiariaInscripciones(gananciaInscripciones);
@@ -78,9 +86,9 @@ public class DashboardRecepcionistaService {
                     venta.setCliente(v.getCliente().getPersona().getNombre() + " " + v.getCliente().getPersona().getApellidos());
                     venta.setFecha(v.getFecha());
                     venta.setProductos(v.getDetallesVenta() != null ? v.getDetallesVenta().stream()
-                        .filter(d -> d.getProducto() != null)
-                        .map(d -> d.getProducto().getNombre())
-                        .toList() : List.of());
+                            .filter(d -> d.getProducto() != null)
+                            .map(d -> d.getProducto().getNombre())
+                            .toList() : List.of());
                     // No hay planes en DetalleVenta, así que dejamos la lista vacía
                     venta.setPlanes(List.of());
                     return venta;
@@ -88,9 +96,12 @@ public class DashboardRecepcionistaService {
                 .toList();
         dto.setUltimasVentas(ultimasVentas);
 
-        // Clientes que asistieron hoy
+// Clientes que asistieron hoy (solo asistencias activas y clientes activos)
         var clientesAsistieronHoy = asistenciaRepository.findAll().stream()
-                .filter(a -> a.getFecha() != null && a.getFecha().equals(hoy) && a.getCliente() != null)
+                .filter(a -> Boolean.TRUE.equals(a.getEstado()) // solo asistencias activas
+                        && a.getFecha() != null && a.getFecha().equals(hoy)
+                        && a.getCliente() != null
+                        && Boolean.TRUE.equals(a.getCliente().getEstado())) // solo clientes activos
                 .map(a -> a.getCliente().getPersona().getNombre() + " " + a.getCliente().getPersona().getApellidos())
                 .distinct()
                 .toList();

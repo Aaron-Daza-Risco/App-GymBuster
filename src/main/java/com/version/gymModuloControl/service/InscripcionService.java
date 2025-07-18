@@ -153,8 +153,7 @@ public class InscripcionService {
         inscripcion.setCliente(cliente);
         inscripcion.setPlan(plan);
         inscripcion.setFechaInscripcion(LocalDate.now());
-        LocalDate fechaInicioPeru = LocalDate.now(ZoneId.of("America/Lima"));
-        inscripcion.setFechaInicio(fechaInicioPeru);
+        inscripcion.setFechaInicio(request.getFechaInicio());
         inscripcion.setFechaFin(fechaFin);
         inscripcion.setMonto(request.getMonto());
         inscripcion.setEstado(EstadoInscripcion.ACTIVO);
@@ -406,7 +405,7 @@ public class InscripcionService {
         inscripcionRepository.save(inscripcion);
     }
 
-    @Scheduled(cron = "0 */8 * * * *") // Todos los días a la 1:00 AM
+    @Scheduled(cron = "0 */10 * * * *") // Cada 10 minutos
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void finalizarInscripcionesVencidas() {
         log.info("=== Iniciando finalización automática de inscripciones vencidas ===");

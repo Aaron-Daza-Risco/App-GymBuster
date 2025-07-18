@@ -127,10 +127,25 @@ public class AlquilerService {
     public Alquiler finalizarAlquiler(Integer idAlquiler) {
         return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.FINALIZADO);
     }
-    
+
     @Transactional
     public Alquiler cancelarAlquiler(Integer idAlquiler) {
-        return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.CANCELADO);
+        Alquiler alquiler = alquilerRepository.findById(idAlquiler)
+                .orElseThrow(() -> new IllegalArgumentException("Alquiler no encontrado con ID: " + idAlquiler));
+
+        // Restablecer stock
+        for (DetalleAlquiler detalle : alquiler.getDetalles()) {
+            Pieza pieza = detalle.getPieza();
+            pieza.setStock(pieza.getStock() + detalle.getCantidad());
+        }
+        alquiler.setTotal(BigDecimal.ZERO);
+        if (alquiler.getPago() != null) {
+            alquiler.getPago().setMontoPagado(BigDecimal.ZERO);
+            alquiler.getPago().setVuelto(BigDecimal.ZERO);
+            alquiler.getPago().setMetodoPago(null);
+        }
+        alquiler.setEstado(EstadoAlquiler.CANCELADO);
+        return alquilerRepository.save(alquiler);
     }
     
     @Transactional

@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -110,5 +111,34 @@ public class VentaService {
             return ventaRepository.save(venta);
         }
         return null;
+    }
+
+    @Transactional
+    public void cancelarVenta(Integer idVenta) {
+        Venta venta = ventaRepository.findById(idVenta)
+                .orElseThrow(() -> new IllegalArgumentException("Venta no encontrada"));
+
+        // Restablecer stock de productos
+        venta.getDetallesVenta().forEach(detalle -> {
+            var producto = detalle.getProducto();
+            producto.setStockTotal(producto.getStockTotal() + detalle.getCantidad());
+            // Si tienes un productoRepository, guárdalo aquí
+        });
+
+        // Limpiar pago asociado
+        PagoVenta pago = venta.getPagoVenta();
+        if (pago != null) {
+            pago.setMontoPagado(BigDecimal.ZERO);
+            pago.setVuelto(BigDecimal.ZERO);
+            pago.setMetodoPago(null);
+            pago.setEstado(false);
+            // Si quieres eliminar el pago: pagoVentaRepository.delete(pago);
+        }
+
+        // Poner total de la venta en 0 y cambiar estado
+        venta.setTotal(BigDecimal.ZERO);
+        venta.setEstado(false);
+
+        ventaRepository.save(venta);
     }
 }
