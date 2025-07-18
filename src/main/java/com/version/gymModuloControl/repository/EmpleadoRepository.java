@@ -2,15 +2,15 @@
 package com.version.gymModuloControl.repository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Map;
+import java.util.Optional;
 
-import com.version.gymModuloControl.model.TipoInstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import com.version.gymModuloControl.model.Empleado;
 import com.version.gymModuloControl.model.Persona;
+import com.version.gymModuloControl.model.TipoInstructor;
 
 public interface EmpleadoRepository extends JpaRepository<Empleado, Integer> {
     List<Empleado> findByEstado(Boolean estado);

@@ -1,12 +1,17 @@
 package com.version.gymModuloControl.controller;
 
-import com.version.gymModuloControl.service.DashboardAdminService;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
+import com.version.gymModuloControl.service.DashboardAdminService;
 
 @RestController
 @RequestMapping("/api/dashboard-admin")

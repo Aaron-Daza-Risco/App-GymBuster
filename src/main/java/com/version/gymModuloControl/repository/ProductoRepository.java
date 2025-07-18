@@ -1,9 +1,11 @@
 package com.version.gymModuloControl.repository;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import com.version.gymModuloControl.model.Producto;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.version.gymModuloControl.model.Producto;
 
 public interface ProductoRepository extends JpaRepository<Producto, Integer> {
 
