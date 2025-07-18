@@ -16,6 +16,15 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
     @Query("SELECT COALESCE(SUM(v.total), 0.0) FROM Venta v WHERE v.estado = true")
     Double sumTotalVentas();
     
+    // Suma total de ventas basado en detalles de venta (sin descuentos a nivel de transacción)
+    @Query(value = """
+        SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) 
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
+        WHERE v.estado = true
+        """, nativeQuery = true)
+    Double sumTotalVentasPorDetalles();
+    
     @Query(value = """
         SELECT 
             DATE_FORMAT(v.fecha, '%Y-%m') as mes,
@@ -33,9 +42,10 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
                 WHEN 11 THEN 'Noviembre'
                 WHEN 12 THEN 'Diciembre'
             END as nombreMes,
-            COUNT(*) as cantidadVentas,
-            SUM(v.total) as totalVentas
-        FROM venta v 
+            COUNT(DISTINCT v.id_venta) as cantidadVentas,
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as totalVentas
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
         WHERE v.estado = true 
         AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL 6 MONTH)
         GROUP BY mes, nombreMes
@@ -60,9 +70,10 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
                 WHEN 11 THEN 'Noviembre'
                 WHEN 12 THEN 'Diciembre'
             END as nombreMes,
-            COUNT(*) as cantidadVentas,
-            SUM(v.total) as totalVentas
-        FROM venta v 
+            COUNT(DISTINCT v.id_venta) as cantidadVentas,
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as totalVentas
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
         WHERE v.estado = true 
         AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL ?1 MONTH)
         GROUP BY mes, nombreMes
@@ -73,7 +84,7 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
     @Query(value = """
         SELECT 
             p.nombre as nombreProducto,
-            COUNT(dv.id_detalle_venta) as cantidadVendida,
+            SUM(dv.cantidad) as cantidadVendida,
             SUM(dv.cantidad * dv.precio_unitario) as totalVentas
         FROM detalle_venta dv
         JOIN producto p ON dv.producto_id = p.id_producto
@@ -89,9 +100,26 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
     @Query(value = """
         SELECT 
             p.nombre as nombreProducto,
+            SUM(dv.cantidad) as cantidadVendida,
+            SUM(dv.cantidad * dv.precio_unitario) as totalVentas
+        FROM detalle_venta dv
+        JOIN producto p ON dv.producto_id = p.id_producto
+        JOIN venta v ON dv.venta_id = v.id_venta
+        WHERE v.estado = true
+        AND MONTH(v.fecha) = MONTH(CURRENT_DATE) 
+        AND YEAR(v.fecha) = YEAR(CURRENT_DATE)
+        GROUP BY p.id_producto, p.nombre
+        ORDER BY cantidadVendida DESC
+        LIMIT 10
+        """, nativeQuery = true)
+    List<Map<String, Object>> getProductosMasVendidosEsteMes();
+    
+    @Query(value = """
+        SELECT 
+            p.nombre as nombreProducto,
             p.id_producto as idProducto,
             dv.precio_unitario as precioUnitario,
-            COUNT(dv.id_detalle_venta) as cantidadVendida,
+            SUM(dv.cantidad) as cantidadVendida,
             SUM(dv.cantidad * dv.precio_unitario) as totalVentas
         FROM detalle_venta dv
         JOIN producto p ON dv.producto_id = p.id_producto
@@ -193,7 +221,39 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
         """, nativeQuery = true)
     Double sumTotalVentasEsteMes();
     
-    // Ingresos por mes
+    // Ingresos del mes actual basado en detalles de venta (sin descuentos a nivel de transacción)
+    @Query(value = """
+        SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) 
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
+        WHERE v.estado = true 
+        AND MONTH(v.fecha) = MONTH(CURRENT_DATE) 
+        AND YEAR(v.fecha) = YEAR(CURRENT_DATE)
+        """, nativeQuery = true)
+    Double sumIngresosPorDetallesEsteMes();
+    
+    // Ingresos por período basado en detalles de venta
+    @Query(value = """
+        SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) 
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
+        WHERE v.estado = true 
+        AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL ?1 MONTH)
+        """, nativeQuery = true)
+    Double sumIngresosPorDetallesPorPeriodo(int meses);
+    
+    // Ingresos período anterior basado en detalles de venta
+    @Query(value = """
+        SELECT COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) 
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
+        WHERE v.estado = true 
+        AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL ?1*2 MONTH)
+        AND v.fecha < DATE_SUB(CURRENT_DATE, INTERVAL ?1 MONTH)
+        """, nativeQuery = true)
+    Double sumIngresosPorDetallesPeriodoAnterior(int meses);
+    
+    // Ingresos por mes - basado en detalles de venta
     @Query(value = """
         SELECT 
             DATE_FORMAT(v.fecha, '%Y-%m') as mes,
@@ -211,9 +271,10 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
                 WHEN 11 THEN 'Noviembre'
                 WHEN 12 THEN 'Diciembre'
             END as nombreMes,
-            COALESCE(SUM(v.total), 0.0) as totalIngresos,
-            COUNT(*) as cantidadVentas
-        FROM venta v 
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as totalIngresos,
+            COUNT(DISTINCT v.id_venta) as cantidadVentas
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
         WHERE v.estado = true 
         AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL ?1 MONTH)
         GROUP BY mes, nombreMes
@@ -231,7 +292,7 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
         """, nativeQuery = true)
     Double sumTotalVentasPeriodoAnterior(int meses);
     
-    // Comparativa mensual mejorada - muestra todos los meses con comparación disponible
+    // Comparativa mensual mejorada - muestra todos los meses con comparación disponible (basado en detalles)
     @Query(value = """
         WITH todos_los_meses AS (
             SELECT 
@@ -250,8 +311,9 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
                     WHEN 11 THEN 'Noviembre'
                     WHEN 12 THEN 'Diciembre'
                 END as nombreMes,
-                COALESCE(SUM(v.total), 0.0) as ventasActuales
-            FROM venta v 
+                COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as ventasActuales
+            FROM detalle_venta dv
+            JOIN venta v ON dv.venta_id = v.id_venta
             WHERE v.estado = true 
             AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL 8 MONTH)
             GROUP BY mes, nombreMes
@@ -372,7 +434,7 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
     List<Map<String, Object>> getRendimientoCategorias(int meses);
     */
     
-    // Evolución de ventas (siempre últimos 6 meses para mostrar tendencia completa)
+    // Evolución de ventas (siempre últimos 6 meses para mostrar tendencia completa) - basado en detalles
     @Query(value = """
         SELECT 
             DATE_FORMAT(v.fecha, '%Y-%m') as mes,
@@ -390,10 +452,13 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
                 WHEN 11 THEN 'Noviembre'
                 WHEN 12 THEN 'Diciembre'
             END as nombreMes,
-            COALESCE(SUM(v.total), 0.0) as totalVentas,
-            COUNT(*) as cantidadVentas,
-            COALESCE(AVG(v.total), 0.0) as ticketPromedio
-        FROM venta v 
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as totalVentas,
+            COUNT(DISTINCT v.id_venta) as cantidadVentas,
+            CASE WHEN COUNT(DISTINCT v.id_venta) > 0 
+                 THEN COALESCE(SUM(dv.cantidad * dv.precio_unitario) / COUNT(DISTINCT v.id_venta), 0.0) 
+                 ELSE 0.0 END as ticketPromedio
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
         WHERE v.estado = true 
         AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL 6 MONTH)
         GROUP BY mes, nombreMes
@@ -401,7 +466,7 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
         """, nativeQuery = true)
     List<Map<String, Object>> getEvolucionVentas(int meses);
     
-    // Evolución de ventas con período personalizado (para cálculos de predicción)
+    // Evolución de ventas con período personalizado (para cálculos de predicción) - basado en detalles
     @Query(value = """
         SELECT 
             DATE_FORMAT(v.fecha, '%Y-%m') as mes,
@@ -419,10 +484,13 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
                 WHEN 11 THEN 'Noviembre'
                 WHEN 12 THEN 'Diciembre'
             END as nombreMes,
-            COALESCE(SUM(v.total), 0.0) as totalVentas,
-            COUNT(*) as cantidadVentas,
-            COALESCE(AVG(v.total), 0.0) as ticketPromedio
-        FROM venta v 
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as totalVentas,
+            COUNT(DISTINCT v.id_venta) as cantidadVentas,
+            CASE WHEN COUNT(DISTINCT v.id_venta) > 0 
+                 THEN COALESCE(SUM(dv.cantidad * dv.precio_unitario) / COUNT(DISTINCT v.id_venta), 0.0) 
+                 ELSE 0.0 END as ticketPromedio
+        FROM detalle_venta dv
+        JOIN venta v ON dv.venta_id = v.id_venta
         WHERE v.estado = true 
         AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL ?1 MONTH)
         GROUP BY mes, nombreMes
@@ -439,9 +507,9 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
             COALESCE(SUM(dv.cantidad), 0) as cantidadVendida,
             COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as ingresos,
             COALESCE(SUM(dv.cantidad * p.precio_compra), 0.0) as costos,
-            COALESCE(SUM(dv.cantidad * (dv.precio_unitario - p.precio_compra)), 0.0) as utilidad,
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario) - SUM(dv.cantidad * p.precio_compra), 0.0) as utilidad,
             CASE WHEN SUM(dv.cantidad * dv.precio_unitario) > 0 
-                 THEN (SUM(dv.cantidad * (dv.precio_unitario - p.precio_compra)) / SUM(dv.cantidad * dv.precio_unitario)) * 100 
+                 THEN ((SUM(dv.cantidad * dv.precio_unitario) - SUM(dv.cantidad * p.precio_compra)) / SUM(dv.cantidad * dv.precio_unitario)) * 100 
                  ELSE 0 END as margenPorcentaje
         FROM detalle_venta dv
         JOIN producto p ON dv.producto_id = p.id_producto
@@ -453,6 +521,31 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
         ORDER BY utilidad DESC
         """, nativeQuery = true)
     List<Map<String, Object>> getRentabilidadProductos(int meses);
+    
+    // Rentabilidad productos - mes actual
+    @Query(value = """
+        SELECT 
+            p.nombre as nombreProducto,
+            p.precio_venta as precioVenta,
+            p.precio_compra as precioCompra,
+            COALESCE(SUM(dv.cantidad), 0) as cantidadVendida,
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario), 0.0) as ingresos,
+            COALESCE(SUM(dv.cantidad * p.precio_compra), 0.0) as costos,
+            COALESCE(SUM(dv.cantidad * dv.precio_unitario) - SUM(dv.cantidad * p.precio_compra), 0.0) as utilidad,
+            CASE WHEN SUM(dv.cantidad * dv.precio_unitario) > 0 
+                 THEN ((SUM(dv.cantidad * dv.precio_unitario) - SUM(dv.cantidad * p.precio_compra)) / SUM(dv.cantidad * dv.precio_unitario)) * 100 
+                 ELSE 0 END as margenPorcentaje
+        FROM detalle_venta dv
+        JOIN producto p ON dv.producto_id = p.id_producto
+        JOIN venta v ON dv.venta_id = v.id_venta
+        WHERE v.estado = true
+        AND MONTH(v.fecha) = MONTH(CURRENT_DATE) 
+        AND YEAR(v.fecha) = YEAR(CURRENT_DATE)
+        GROUP BY p.id_producto, p.nombre, p.precio_venta, p.precio_compra
+        HAVING cantidadVendida > 0
+        ORDER BY utilidad DESC
+        """, nativeQuery = true)
+    List<Map<String, Object>> getRentabilidadProductosEsteMes();
     
     // Margen por producto
     @Query(value = """

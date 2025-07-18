@@ -24,12 +24,12 @@ public class ReporteVentasService {
         
         int meses = obtenerMesesPorPeriodo(periodo);
         
-        // Para período mensual, usar ingresos del mes actual completo para consistencia
+        // Para consistencia con productos más vendidos, usar suma de detalles de venta
         Double ingresosTotales;
         if ("mensual".equalsIgnoreCase(periodo)) {
-            ingresosTotales = ventaRepository.sumTotalVentasEsteMes();
+            ingresosTotales = ventaRepository.sumIngresosPorDetallesEsteMes();
         } else {
-            ingresosTotales = ventaRepository.sumTotalVentasPorPeriodo(meses);
+            ingresosTotales = ventaRepository.sumIngresosPorDetallesPorPeriodo(meses);
         }
         if (ingresosTotales == null) ingresosTotales = 0.0;
         
@@ -37,7 +37,7 @@ public class ReporteVentasService {
         List<Map<String, Object>> ingresosPorMes = ventaRepository.getIngresosPorMes(meses);
         
         // Ingresos del mes actual
-        Double ingresosEsteMes = ventaRepository.sumTotalVentasEsteMes();
+        Double ingresosEsteMes = ventaRepository.sumIngresosPorDetallesEsteMes();
         if (ingresosEsteMes == null) ingresosEsteMes = 0.0;
         
         resultado.put("ingresosTotales", ingresosTotales);
@@ -59,13 +59,23 @@ public class ReporteVentasService {
         Long ventasPeriodoAnterior = ventaRepository.countVentasPeriodoAnterior(meses);
         boolean tieneHistorial = ventasPeriodoAnterior != null && ventasPeriodoAnterior > 0;
         
-        // Ventas período actual
-        Double ventasActuales = ventaRepository.sumTotalVentasPorPeriodo(meses);
+        // Ventas período actual - usar el mismo método que ingresos totales (basado en detalles)
+        Double ventasActuales;
+        if ("mensual".equalsIgnoreCase(periodo)) {
+            ventasActuales = ventaRepository.sumIngresosPorDetallesEsteMes();
+        } else {
+            ventasActuales = ventaRepository.sumIngresosPorDetallesPorPeriodo(meses);
+        }
         if (ventasActuales == null) ventasActuales = 0.0;
         
         if (tieneHistorial) {
-            // Ventas período anterior
-            Double ventasAnteriores = ventaRepository.sumTotalVentasPeriodoAnterior(meses);
+            // Ventas período anterior - usar el mismo método que ingresos totales (basado en detalles)
+            Double ventasAnteriores;
+            if ("mensual".equalsIgnoreCase(periodo)) {
+                ventasAnteriores = ventaRepository.sumIngresosPorDetallesPeriodoAnterior(1);
+            } else {
+                ventasAnteriores = ventaRepository.sumIngresosPorDetallesPeriodoAnterior(meses);
+            }
             if (ventasAnteriores == null) ventasAnteriores = 0.0;
             
             // Cálculo del crecimiento
@@ -121,9 +131,17 @@ public class ReporteVentasService {
         Double promedioTransaccionesDiarias = ventaRepository.getPromedioTransaccionesDiarias(meses);
         if (promedioTransaccionesDiarias == null) promedioTransaccionesDiarias = 0.0;
         
-        // Ticket promedio
+        // Ticket promedio - usar el mismo método que ingresos totales (basado en detalles)
+        Double ingresosTotalesParaTicket;
+        if ("mensual".equalsIgnoreCase(periodo)) {
+            ingresosTotalesParaTicket = ventaRepository.sumIngresosPorDetallesEsteMes();
+        } else {
+            ingresosTotalesParaTicket = ventaRepository.sumIngresosPorDetallesPorPeriodo(meses);
+        }
+        if (ingresosTotalesParaTicket == null) ingresosTotalesParaTicket = 0.0;
+        
         Double ticketPromedio = totalTransacciones > 0 ? 
-            ventaRepository.sumTotalVentasPorPeriodo(meses) / totalTransacciones : 0.0;
+            ingresosTotalesParaTicket / totalTransacciones : 0.0;
         
         resultado.put("totalTransacciones", totalTransacciones);
         resultado.put("transaccionesPorMes", transaccionesPorMes);
@@ -141,18 +159,18 @@ public class ReporteVentasService {
         try {
             int meses = obtenerMesesPorPeriodo(periodo);
             
-            // Ventas por categoría - usar el mismo período que ingresos totales
+            // Ventas por categoría - usar el mismo método que ingresos totales (basado en detalles)
             List<Map<String, Object>> ventasPorCategoriaRaw;
             Double totalVentas;
             
             if ("mensual".equalsIgnoreCase(periodo)) {
                 // Para período mensual, usar el mes actual completo para consistencia
                 ventasPorCategoriaRaw = ventaRepository.getVentasPorCategoriaEsteMes();
-                totalVentas = ventaRepository.sumTotalVentasEsteMes();
+                totalVentas = ventaRepository.sumIngresosPorDetallesEsteMes();
             } else {
                 // Para otros períodos, usar el período móvil
                 ventasPorCategoriaRaw = ventaRepository.getVentasPorCategoriaConPeriodo(meses);
-                totalVentas = ventaRepository.sumTotalVentasPorPeriodo(meses);
+                totalVentas = ventaRepository.sumIngresosPorDetallesPorPeriodo(meses);
             }
             
             if (totalVentas == null) totalVentas = 0.0;
@@ -205,17 +223,27 @@ public class ReporteVentasService {
         
         int meses = obtenerMesesPorPeriodo(periodo);
         
-        // Top 10 productos más vendidos
-        List<Map<String, Object>> top10Productos = ventaRepository.getProductosMasVendidosConPeriodo(meses);
+        // Top 10 productos más vendidos - usar el mismo período que ingresos totales
+        List<Map<String, Object>> top10Productos;
+        Double totalVentasGeneral;
+        
+        if ("mensual".equalsIgnoreCase(periodo)) {
+            // Para período mensual, usar el mes actual completo para consistencia
+            top10Productos = ventaRepository.getProductosMasVendidosEsteMes();
+            totalVentasGeneral = ventaRepository.sumIngresosPorDetallesEsteMes();
+        } else {
+            // Para otros períodos, usar el período móvil
+            top10Productos = ventaRepository.getProductosMasVendidosConPeriodo(meses);
+            totalVentasGeneral = ventaRepository.sumIngresosPorDetallesPorPeriodo(meses);
+        }
+        
+        if (totalVentasGeneral == null) totalVentasGeneral = 0.0;
         
         // Distribución de ventas - Top productos
         Double totalVentasTopProductos = 0.0;
         for (Map<String, Object> producto : top10Productos) {
             totalVentasTopProductos += ((Number) producto.get("totalVentas")).doubleValue();
         }
-        
-        Double totalVentasGeneral = ventaRepository.sumTotalVentasPorPeriodo(meses);
-        if (totalVentasGeneral == null) totalVentasGeneral = 0.0;
         
         Double porcentajeTopProductos = totalVentasGeneral > 0 ? 
             (totalVentasTopProductos / totalVentasGeneral) * 100 : 0.0;
@@ -274,7 +302,12 @@ public class ReporteVentasService {
             Map<String, Object> costosIngresos = new HashMap<>();
             
             try {
-                rentabilidadProductos = ventaRepository.getRentabilidadProductos(meses);
+                // Usar el método específico para el mes actual cuando el período es mensual
+                if ("mensual".equalsIgnoreCase(periodo)) {
+                    rentabilidadProductos = ventaRepository.getRentabilidadProductosEsteMes();
+                } else {
+                    rentabilidadProductos = ventaRepository.getRentabilidadProductos(meses);
+                }
             } catch (Exception e) {
                 System.err.println("Error al obtener rentabilidad productos: " + e.getMessage());
             }
@@ -297,8 +330,13 @@ public class ReporteVentasService {
                 costosIngresos.put("margenBruto", 0.0);
             }
             
-            // Resumen de rentabilidad
-            Double ingresosTotales = ventaRepository.sumTotalVentasPorPeriodo(meses);
+            // Resumen de rentabilidad - usar el mismo método que ingresos totales (basado en detalles)
+            Double ingresosTotales;
+            if ("mensual".equalsIgnoreCase(periodo)) {
+                ingresosTotales = ventaRepository.sumIngresosPorDetallesEsteMes();
+            } else {
+                ingresosTotales = ventaRepository.sumIngresosPorDetallesPorPeriodo(meses);
+            }
             if (ingresosTotales == null) ingresosTotales = 0.0;
             
             Double costosTotales = ((Number) costosIngresos.getOrDefault("costosTotales", 0.0)).doubleValue();

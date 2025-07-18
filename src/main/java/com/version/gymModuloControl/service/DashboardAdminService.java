@@ -42,7 +42,7 @@ public class DashboardAdminService {
         dashboard.put("empleados", empleadoRepository.countByEstadoTrue());
         dashboard.put("clientes", personaRepository.countClientesActivos());
         dashboard.put("ventasHoy", ventaRepository.countVentasHoy());
-        dashboard.put("ventasTotales", ventaRepository.sumTotalVentas());
+        dashboard.put("ventasTotales", ventaRepository.sumTotalVentasPorDetalles());
         dashboard.put("productosAgotados", productoRepository.countProductosBajoStock());
         dashboard.put("nuevasInscripciones", inscripcionRepository.countInscripcionesHoy());
         
