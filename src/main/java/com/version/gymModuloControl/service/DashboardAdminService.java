@@ -4,15 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.version.gymModuloControl.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import com.version.gymModuloControl.repository.AsistenciaRepository;
-import com.version.gymModuloControl.repository.EmpleadoRepository;
-import com.version.gymModuloControl.repository.InscripcionRepository;
-import com.version.gymModuloControl.repository.PersonaRepository;
-import com.version.gymModuloControl.repository.ProductoRepository;
-import com.version.gymModuloControl.repository.VentaRepository;
 
 @Service
 public class DashboardAdminService {
@@ -34,6 +28,9 @@ public class DashboardAdminService {
 
     @Autowired
     private AsistenciaRepository asistenciaRepository;
+
+    @Autowired
+    private PiezaRepository piezaRepository;
 
     public Map<String, Object> obtenerDatosDashboard() {
         Map<String, Object> dashboard = new HashMap<>();
@@ -163,5 +160,22 @@ public class DashboardAdminService {
         horarios.put("total", empleados.size());
         
         return horarios;
+    }
+
+    public Map<String, Object> obtenerPiezasBajoStock() {
+        Map<String, Object> piezas = new HashMap<>();
+
+        // Lista de piezas con bajo stock
+        List<Map<String, Object>> piezasBajoStock = piezaRepository.getPiezasBajoStock();
+        piezas.put("piezasBajoStock", piezasBajoStock);
+
+        // Resumen de inventario de piezas
+        Map<String, Object> resumenInventario = new HashMap<>();
+        resumenInventario.put("totalPiezas", piezaRepository.countByEstadoTrue());
+        resumenInventario.put("piezasAgotadas", piezaRepository.countByStockAndEstado(0, true));
+        resumenInventario.put("piezasBajoStock", piezaRepository.getPiezasBajoStock().size());
+        piezas.put("resumenInventario", resumenInventario);
+
+        return piezas;
     }
 }

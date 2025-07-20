@@ -76,10 +76,17 @@ public class DashboardRecepcionistaService {
                 .toList();
         dto.setUltimasInscripciones(ultimasInscripciones);
 
-        // Últimas ventas (últimos 5)
+// Ordenar por fecha y hora (suponiendo que v.getFecha() es LocalDateTime o Date)
         var ultimasVentas = ventaRepository.findAll().stream()
                 .filter(v -> Boolean.TRUE.equals(v.getEstado()))
-                .sorted((a, b) -> b.getFecha().compareTo(a.getFecha()))
+                .sorted((a, b) -> {
+                    int cmp = b.getFecha().compareTo(a.getFecha());
+                    if (cmp == 0) {
+                        // Si la fecha es igual, ordenar por ID descendente
+                        return b.getIdVenta().compareTo(a.getIdVenta());
+                    }
+                    return cmp;
+                })
                 .limit(5)
                 .map(v -> {
                     DashboardRecepcionistaDTO.UltimaVentaDTO venta = new DashboardRecepcionistaDTO.UltimaVentaDTO();
@@ -89,12 +96,13 @@ public class DashboardRecepcionistaService {
                             .filter(d -> d.getProducto() != null)
                             .map(d -> d.getProducto().getNombre())
                             .toList() : List.of());
-                    // No hay planes en DetalleVenta, así que dejamos la lista vacía
                     venta.setPlanes(List.of());
                     return venta;
                 })
                 .toList();
         dto.setUltimasVentas(ultimasVentas);
+
+
 
 // Clientes que asistieron hoy (solo asistencias activas y clientes activos)
         var clientesAsistieronHoy = asistenciaRepository.findAll().stream()

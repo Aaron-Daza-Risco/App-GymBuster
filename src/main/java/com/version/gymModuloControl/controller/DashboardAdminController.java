@@ -102,4 +102,16 @@ public class DashboardAdminController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/piezas-bajo-stock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> obtenerPiezasBajoStock() {
+        try {
+            Map<String, Object> piezas = dashboardAdminService.obtenerPiezasBajoStock();
+            return ResponseEntity.ok(piezas);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

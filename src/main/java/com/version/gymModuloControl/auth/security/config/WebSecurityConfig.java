@@ -113,7 +113,20 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/asistencia/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/dashboard-recepcionista").hasRole("RECEPCIONISTA")
-
+                        // --- Permisos para reportes de ventas ---
+                        .requestMatchers("/api/reportes/alquileres/estados/mes-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/estados/trimestre-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/estados/anio-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/top10-piezas/mes-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/top10-piezas/trimestre-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/top10-piezas/anio-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/pendientes-mora").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/ingresos-mes-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/ingresos-trimestre-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/ingresos-anio-actual").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/alquileres/tendencia").hasRole("ADMIN")
+                        // --- Permisos para administrador ---
+                        .requestMatchers("/api/dashboard-admin/piezas-bajo-stock").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);

@@ -582,4 +582,8 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
         AND v.fecha >= DATE_SUB(CURRENT_DATE, INTERVAL ?1 MONTH)
         """, nativeQuery = true)
     List<Map<String, Object>> getCostosVsIngresos(int meses);
+
+
+
+
 }
