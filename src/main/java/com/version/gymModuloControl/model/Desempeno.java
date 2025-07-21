@@ -3,8 +3,6 @@ package com.version.gymModuloControl.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.List;
-
 @Entity
 @Table(name = "desempeno")
 @Data
@@ -29,6 +27,20 @@ public class Desempeno {
 
     private Boolean estado = true;
 
-    @OneToMany(mappedBy = "desempeno", cascade = CascadeType.ALL)
-    private List<Inscripcion> inscripciones;
+    @ManyToOne
+    @JoinColumn(name = "inscripcion_id")
+    private Inscripcion inscripcion;
+
+    @ManyToOne
+    @JoinColumn(name = "cliente_id", nullable = false)
+    private Cliente cliente;
+
+    @Column(name = "creado_por")
+    private String creadoPor;
+
+    @Column(name = "fecha_creacion")
+    private java.time.LocalDateTime fechaCreacion;
+
+    @Column(name = "fecha_modificacion")
+    private java.time.LocalDateTime fechaModificacion;
 }

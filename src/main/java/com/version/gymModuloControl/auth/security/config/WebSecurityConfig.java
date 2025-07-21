@@ -53,7 +53,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/auth/register").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/auth/usuarios").hasRole("ADMIN")
                         .requestMatchers("/api/auth/usuarios/seguridad").hasRole("ADMIN")
-                        .requestMatchers("/api/auth/usuarios/*/estado").hasRole("ADMIN") 
+                        .requestMatchers("/api/auth/usuarios/*/estado").hasRole("ADMIN")
                         .requestMatchers("/api/auth/usuarios/*/rol").hasRole("ADMIN")
                         .requestMatchers("/api/auth/me").authenticated()
 
@@ -103,15 +103,34 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/asistencia/marcar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/asistencia/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/horario-empleado/empleado/*/dia/*").hasAnyRole("ADMIN", "RECEPCIONISTA")
+
+                        // REGLAS ESPECÍFICAS PARA CLIENTES (DEBEN IR PRIMERO)
+                        .requestMatchers("/api/inscripciones/planes-inscritos/**").hasRole("CLIENTE")
+                        .requestMatchers("/api/inscripciones/historial-planes/**").hasRole("CLIENTE")
+                        .requestMatchers("/api/inscripciones/cliente/*/inscripciones").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+                        .requestMatchers("/api/inscripciones/inscripciones/*/detalle").hasAnyRole("ADMIN", "RECEPCIONISTA", "CLIENTE")
+
+                        // REGLAS PARA ADMIN/RECEPCIONISTA
                         .requestMatchers("/api/inscripciones/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/inscripciones/instructores-disponibles/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
-                        .requestMatchers("/api/inscripciones/horarios-instructor/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+                        .requestMatchers("/api/inscripciones/horarios-instructor/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "ENTRENADOR")
                         .requestMatchers("/api/inscripciones/pago/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
-                        .requestMatchers("/api/inscripciones/*/detalle").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/inscripciones/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/inscripciones/cancelar/**").hasAnyRole("ADMIN", "RECEPCIONISTA")
+
                         .requestMatchers("/api/asistencia/registrar").hasAnyRole("ADMIN", "RECEPCIONISTA")
                         .requestMatchers("/api/listar").hasAnyRole("ADMIN", "RECEPCIONISTA")
+
+                        .requestMatchers("/api/desempeno/registrar").hasRole("ENTRENADOR")
+                        .requestMatchers("/api/desempeno/actualizar/**").hasRole("ENTRENADOR")
+                        .requestMatchers("/api/desempeno/eliminar/**").hasRole("ENTRENADOR")
+                        .requestMatchers("/api/desempeno/cliente/**").hasAnyRole("CLIENTE", "ENTRENADOR", "ADMIN")
+                        .requestMatchers("/api/desempeno/historial/**").hasAnyRole("CLIENTE", "ENTRENADOR", "ADMIN")
+                        .requestMatchers("/api/desempeno/inscripcion/**").hasAnyRole("CLIENTE", "ENTRENADOR", "ADMIN")
+
+                        .requestMatchers("/api/entrenador/premium/planes-clientes").hasRole("ENTRENADOR")
+                        .requestMatchers("/api/entrenador/estandar/planes-clientes").hasRole("ENTRENADOR")
+
                         .requestMatchers("/api/dashboard-recepcionista").hasRole("RECEPCIONISTA")
                         // --- Permisos para reportes de ventas ---
                         .requestMatchers("/api/reportes/alquileres/estados/mes-actual").hasRole("ADMIN")
@@ -127,6 +146,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/reportes/alquileres/tendencia").hasRole("ADMIN")
                         // --- Permisos para administrador ---
                         .requestMatchers("/api/dashboard-admin/piezas-bajo-stock").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);

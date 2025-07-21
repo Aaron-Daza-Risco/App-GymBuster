@@ -8,18 +8,25 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.version.gymModuloControl.model.EstadoInscripcion;
 import com.version.gymModuloControl.model.Inscripcion;
+import com.version.gymModuloControl.model.Plan;
 
 public interface InscripcionRepository extends JpaRepository<Inscripcion, Integer> {
     // Cambiar esto
     List<Inscripcion> findByClienteIdCliente(Integer clienteId);
-    
+
     // Cambiar esto
     List<Inscripcion> findByRecepcionistaIdEmpleado(Integer recepcionistaId);
 
     boolean existsByPlan_IdPlan(Integer idPlan);
     Optional<Inscripcion> findByClienteIdClienteAndFechaFinAfterAndEstadoTrue(Integer idCliente, LocalDate fecha);
     Optional<Inscripcion> findTopByClienteIdClienteOrderByFechaInscripcionDesc(Integer idCliente);
+
+    List<Inscripcion> findByClienteIdClienteAndEstadoIn(Integer idCliente, List<String> estados);
+    List<Inscripcion> findByPlanIdPlanAndEstado(Integer idPlan, EstadoInscripcion estado);
+
+
     
     @Query("SELECT COUNT(i) FROM Inscripcion i WHERE DATE(i.fechaInscripcion) = CURRENT_DATE AND i.estado = 'ACTIVO'")
     Long countInscripcionesHoy();
@@ -72,3 +79,4 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Intege
     List<Map<String, Object>> getUltimasInscripciones();
 
 }
+

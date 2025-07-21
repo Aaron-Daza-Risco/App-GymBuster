@@ -8,5 +8,5 @@ import com.version.gymModuloControl.model.DetalleInscripcion;
 
 public interface DetalleInscripcionRepository extends JpaRepository<DetalleInscripcion, Integer> {
     List<DetalleInscripcion> findByInscripcionIdInscripcion(Integer inscripcionId);
+    List<DetalleInscripcion> findByHorarioEmpleadoEmpleadoIdEmpleado(Integer idEntrenador);
 }
-
