@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -414,7 +415,7 @@ public class InscripcionService {
         inscripcionRepository.save(inscripcion);
     }
 
-    @Scheduled(cron = "0 */8 * * * *") // Todos los días a la 1:00 AM
+    @Scheduled(cron = "0 */10 * * * *") // Cada 10 minutos
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void finalizarInscripcionesVencidas() {
         log.info("=== Iniciando finalización automática de inscripciones vencidas ===");

@@ -3,6 +3,7 @@ package com.version.gymModuloControl.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,10 +127,25 @@ public class AlquilerService {
     public Alquiler finalizarAlquiler(Integer idAlquiler) {
         return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.FINALIZADO);
     }
-    
+
     @Transactional
     public Alquiler cancelarAlquiler(Integer idAlquiler) {
-        return cambiarEstadoAlquiler(idAlquiler, EstadoAlquiler.CANCELADO);
+        Alquiler alquiler = alquilerRepository.findById(idAlquiler)
+                .orElseThrow(() -> new IllegalArgumentException("Alquiler no encontrado con ID: " + idAlquiler));
+
+        // Restablecer stock
+        for (DetalleAlquiler detalle : alquiler.getDetalles()) {
+            Pieza pieza = detalle.getPieza();
+            pieza.setStock(pieza.getStock() + detalle.getCantidad());
+        }
+        alquiler.setTotal(BigDecimal.ZERO);
+        if (alquiler.getPago() != null) {
+            alquiler.getPago().setMontoPagado(BigDecimal.ZERO);
+            alquiler.getPago().setVuelto(BigDecimal.ZERO);
+            alquiler.getPago().setMetodoPago(null);
+        }
+        alquiler.setEstado(EstadoAlquiler.CANCELADO);
+        return alquilerRepository.save(alquiler);
     }
     
     @Transactional
@@ -177,7 +193,7 @@ public class AlquilerService {
     // Método para crear un alquiler completo en una sola transacción
     @Transactional
     public AlquilerConDetalleDTO crearAlquilerCompleto(AlquilerCompletoDTO alquilerCompletoDTO) {
-        // 1. Obtener el empleado actual del contexto de seguridad
+        // 1. Obtener el empleado actual
         Empleado empleadoActual = obtenerEmpleadoActual();
 
         // 2. Validar cliente
@@ -188,69 +204,71 @@ public class AlquilerService {
         Alquiler alquiler = new Alquiler();
         alquiler.setCliente(cliente);
         alquiler.setEmpleado(empleadoActual);
-        
-        // Establecer fechas asegurando que estén en el orden correcto
+
         LocalDate hoy = LocalDate.now();
         alquiler.setFechaInicio(hoy);
-        
-        // Verificar que la fecha de fin sea posterior a la fecha de inicio y no más de 30 días
+
         LocalDate fechaFin = alquilerCompletoDTO.getFechaFin();
         if (fechaFin == null || fechaFin.isBefore(hoy) || fechaFin.isEqual(hoy)) {
-            // Si la fecha es nula o anterior/igual a hoy, configurar para una semana después
             fechaFin = hoy.plusDays(7);
         }
-        
-        // Calcular la diferencia de días
-        long diasAlquiler = ChronoUnit.DAYS.between(hoy, fechaFin);
+
+        long diasAlquiler = ChronoUnit.DAYS.between(hoy, fechaFin) + 1;  // Incluye el día de inicio
         if (diasAlquiler > 30) {
             throw new IllegalArgumentException("El período de alquiler no puede exceder los 30 días");
         }
         if (diasAlquiler < 1) {
             throw new IllegalArgumentException("El período de alquiler debe ser de al menos 1 día");
         }
-        
+
         alquiler.setFechaFin(fechaFin);
         alquiler.setEstado(EstadoAlquiler.ACTIVO);
-        
-        // 4. Guardar el alquiler para obtener un ID
+
+        // 4. Guardar el alquiler
         alquiler = alquilerRepository.save(alquiler);
-        
-        // 5. Procesar y guardar los detalles del alquiler
-        List<DetalleAlquiler> detalles = new java.util.ArrayList<>();
+
+        // 5. Procesar y guardar los detalles
+        List<DetalleAlquiler> detalles = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
-        
+
         for (DetalleAlquilerDTO detalleDTO : alquilerCompletoDTO.getDetalles()) {
             DetalleAlquiler detalle = detalleAlquilerService.agregarDetalleAlquiler(
-                alquiler.getIdAlquiler(), 
-                detalleDTO.getPiezaId(), 
-                detalleDTO.getCantidad()
+                    alquiler.getIdAlquiler(),
+                    detalleDTO.getPiezaId(),
+                    detalleDTO.getCantidad()
             );
+
+            // Calcular el subtotal manualmente aquí (precio × cantidad × días)
+            BigDecimal precioUnitario = detalle.getPieza().getPrecioAlquiler();
+            BigDecimal subtotal = precioUnitario
+                    .multiply(BigDecimal.valueOf(detalle.getCantidad()))
+                    .multiply(BigDecimal.valueOf(diasAlquiler));
+            detalle.setSubtotal(subtotal);
+
             detalles.add(detalle);
-            
-            // Calcular el subtotal y agregarlo al total
-            if (detalle.getSubtotal() != null) {
-                total = total.add(detalle.getSubtotal());
-            }
+            total = total.add(subtotal);
         }
-        
+
         alquiler.setDetalles(detalles);
         alquiler.setTotal(total);
-        
-        // 6. Registrar el pago
-        if (alquilerCompletoDTO.getMontoPagado() != null && alquilerCompletoDTO.getMetodoPago() != null && 
-            !alquilerCompletoDTO.getMetodoPago().isEmpty()) {
+
+        // 6. Registrar el pago (opcional)
+        if (alquilerCompletoDTO.getMontoPagado() != null &&
+                alquilerCompletoDTO.getMetodoPago() != null &&
+                !alquilerCompletoDTO.getMetodoPago().isEmpty()) {
+
             PagoAlquiler pago = pagoAlquilerService.registrarPago(
-                alquiler.getIdAlquiler(),
-                alquilerCompletoDTO.getMontoPagado(),
-                alquilerCompletoDTO.getMetodoPago()
+                    alquiler.getIdAlquiler(),
+                    alquilerCompletoDTO.getMontoPagado(),
+                    alquilerCompletoDTO.getMetodoPago()
             );
             alquiler.setPago(pago);
         }
-        
-        // 7. Guardar los cambios del alquiler
+
+        // 7. Guardar los cambios finales del alquiler
         alquiler = alquilerRepository.save(alquiler);
-        
-        // 8. Devolver el DTO con toda la información
+
+        // 8. Devolver DTO con todo
         return obtenerAlquilerConDetalle(alquiler.getIdAlquiler());
     }
 

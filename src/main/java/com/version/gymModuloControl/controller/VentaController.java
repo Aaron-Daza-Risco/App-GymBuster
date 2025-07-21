@@ -9,6 +9,7 @@ import com.version.gymModuloControl.model.Venta;
 import com.version.gymModuloControl.service.DetalleVentaService;
 import com.version.gymModuloControl.service.PagoVentaService;
 import com.version.gymModuloControl.service.VentaService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,6 +59,17 @@ public class VentaController {
             return ResponseEntity.ok(ventaActualizada);
         } else {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/cancelar/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    public ResponseEntity<?> cancelarVenta(@PathVariable Integer id) {
+        try {
+            ventaService.cancelarVenta(id);
+            return ResponseEntity.ok("Venta cancelada correctamente.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
