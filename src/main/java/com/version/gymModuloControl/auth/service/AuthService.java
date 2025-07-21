@@ -562,13 +562,11 @@ public class AuthService {
             rolActual = usuario.getUsuarioRoles().get(0).getRol().getNombre();
         }
 
-        // Verificar las reglas de negocio:
-        // 1. Los empleados no pueden cambiar a rol CLIENTE
-        // 2. Los clientes sí pueden cambiar a roles de empleados
         boolean esRolCliente = rolNombre.equals("CLIENTE");
         boolean esRolEmpleado = rolNombre.equals("ADMIN") || rolNombre.equals("RECEPCIONISTA") || rolNombre.equals("ENTRENADOR");
         boolean usuarioEsCliente = rolActual.equals("CLIENTE");
         boolean usuarioEsEmpleado = rolActual.equals("ADMIN") || rolActual.equals("RECEPCIONISTA") || rolActual.equals("ENTRENADOR");
+
 
         if (usuarioEsEmpleado && esRolCliente) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -631,9 +629,9 @@ public class AuthService {
         }
 
         // Guardar el usuario con sus roles actualizados
+
         usuarioRepository.save(usuario);
 
-        // Si el nuevo rol no es ENTRENADOR, limpiar los campos específicos de entrenador
         if (!rolNombre.equals("ENTRENADOR")) {
             Optional<Empleado> empleadoOpt = empleadoRepository.findByPersonaIdPersona(usuario.getPersona().getIdPersona());
             if (empleadoOpt.isPresent()) {
@@ -644,7 +642,35 @@ public class AuthService {
             }
         }
 
-        // Vaciar la caché de Hibernate para asegurar que los cambios se reflejen
+        // Desactivar perfil de cliente si el usuario era cliente y ahora es empleado
+        if (usuarioEsCliente && esRolEmpleado) {
+            Optional<Cliente> clienteOpt = clienteRepository.findByPersona(usuario.getPersona());
+            if (clienteOpt.isPresent()) {
+                Cliente cliente = clienteOpt.get();
+                cliente.setEstado(false);
+                clienteRepository.save(cliente);
+                System.out.println("Perfil de cliente desactivado para usuario ID: " + usuario.getId());
+            }
+        }
+
+        // Activar perfil de cliente si el nuevo rol es CLIENTE
+        if (esRolCliente) {
+            Optional<Cliente> clienteOpt = clienteRepository.findByPersona(usuario.getPersona());
+            if (clienteOpt.isPresent()) {
+                Cliente cliente = clienteOpt.get();
+                cliente.setEstado(true);
+                clienteRepository.save(cliente);
+                System.out.println("Perfil de cliente activado para usuario ID: " + usuario.getId());
+            } else {
+                // Si no existe, puedes crear el registro de cliente aquí si lo necesitas
+                // Cliente nuevoCliente = new Cliente();
+                // nuevoCliente.setPersona(usuario.getPersona());
+                // nuevoCliente.setEstado(true);
+                // nuevoCliente.setFechaRegistro(LocalDate.now());
+                // clienteRepository.save(nuevoCliente);
+            }
+        }
+
         entityManager.flush();
         entityManager.clear();
 
@@ -652,24 +678,16 @@ public class AuthService {
         response.put("mensaje", "Rol actualizado correctamente");
         response.put("nuevoRol", rolNombre);
 
-        // Si un cliente es promovido a empleado, crear el registro de Empleado correspondiente
         if (usuarioEsCliente && esRolEmpleado) {
-            // Buscar la Persona asociada al Usuario
             Persona persona = usuario.getPersona();
             if (persona != null) {
-                // Verificar si ya existe un registro de Empleado para esta Persona
                 Optional<Empleado> empleadoExistente = empleadoRepository.findByPersonaIdPersona(persona.getIdPersona());
-
                 if (empleadoExistente.isEmpty()) {
-                    // Crear un nuevo registro de Empleado
                     Empleado nuevoEmpleado = new Empleado();
                     nuevoEmpleado.setPersona(persona);
                     nuevoEmpleado.setEstado(true);
                     nuevoEmpleado.setFechaContratacion(LocalDate.now());
-
-                    // Guardar con valores por defecto, el frontend solicitará completar los datos
                     empleadoRepository.save(nuevoEmpleado);
-
                     response.put("empleadoCreado", true);
                     response.put("mensaje", "Rol actualizado correctamente. Se ha creado un registro de empleado");
                 }
@@ -678,7 +696,6 @@ public class AuthService {
 
         return ResponseEntity.ok(response);
     }
-
 
     @Transactional
     public ResponseEntity<?> updateUserCredentials(int userId, String nombreUsuario, String contrasena) {
@@ -835,5 +852,9 @@ public class AuthService {
         }
     }
 
+    public boolean isUsuarioActivo(String nombreUsuario) {
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByNombreUsuario(nombreUsuario);
+        return usuarioOpt.isPresent() && Boolean.TRUE.equals(usuarioOpt.get().getEstado());
+    }
 }
 

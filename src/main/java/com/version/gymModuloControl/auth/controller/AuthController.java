@@ -36,6 +36,12 @@ public class AuthController {
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         System.out.println("Intento de login con: " + loginRequest.getNombreUsuario());
         try {
+            // Verificar estado del usuario antes de autenticar
+            boolean usuarioActivo = authService.isUsuarioActivo(loginRequest.getNombreUsuario());
+            if (!usuarioActivo) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("El usuario está inactivo y no puede iniciar sesión.");
+            }
             JwtResponse jwtResponse = authService.login(loginRequest);
             return ResponseEntity.ok(jwtResponse);
         } catch (Exception e) {
