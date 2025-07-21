@@ -30,6 +30,9 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Intege
     @Query("SELECT COUNT(i) FROM Inscripcion i WHERE DATE(i.fechaInscripcion) = CURRENT_DATE AND i.estado = 'ACTIVO'")
     Long countInscripcionesHoy();
     
+    @Query("SELECT COALESCE(SUM(p.precio), 0.0) FROM Inscripcion i JOIN i.plan p WHERE i.estado = 'ACTIVO'")
+    Double sumTotalInscripciones();
+    
     @Query(value = """
         SELECT 
             DATE_FORMAT(i.fecha_inscripcion, '%Y-%m') as mes,

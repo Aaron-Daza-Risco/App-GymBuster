@@ -4,9 +4,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.version.gymModuloControl.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.version.gymModuloControl.repository.AsistenciaRepository;
+import com.version.gymModuloControl.repository.EmpleadoRepository;
+import com.version.gymModuloControl.repository.InscripcionRepository;
+import com.version.gymModuloControl.repository.PersonaRepository;
+import com.version.gymModuloControl.repository.PiezaRepository;
+import com.version.gymModuloControl.repository.ProductoRepository;
+import com.version.gymModuloControl.repository.VentaRepository;
 
 @Service
 public class DashboardAdminService {
@@ -39,7 +46,16 @@ public class DashboardAdminService {
         dashboard.put("empleados", empleadoRepository.countByEstadoTrue());
         dashboard.put("clientes", personaRepository.countClientesActivos());
         dashboard.put("ventasHoy", ventaRepository.countVentasHoy());
-        dashboard.put("ventasTotales", ventaRepository.sumTotalVentasPorDetalles());
+        
+        // Calcular ingresos totales (ventas + inscripciones + alquileres)
+        Double ventasTotales = ventaRepository.sumTotalVentasPorDetalles();
+        Double ingresoInscripciones = inscripcionRepository.sumTotalInscripciones();
+        Double ingresoAlquileres = piezaRepository.sumTotalAlquileres();
+        Double ingresosTotales = (ventasTotales != null ? ventasTotales : 0.0) +
+                                (ingresoInscripciones != null ? ingresoInscripciones : 0.0) +
+                                (ingresoAlquileres != null ? ingresoAlquileres : 0.0);
+        
+        dashboard.put("ventasTotales", ingresosTotales);
         dashboard.put("productosAgotados", productoRepository.countProductosBajoStock());
         dashboard.put("nuevasInscripciones", inscripcionRepository.countInscripcionesHoy());
         
