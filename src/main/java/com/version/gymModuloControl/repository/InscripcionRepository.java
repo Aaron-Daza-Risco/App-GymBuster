@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 
 import com.version.gymModuloControl.model.EstadoInscripcion;
 import com.version.gymModuloControl.model.Inscripcion;
-import com.version.gymModuloControl.model.Plan;
 
 public interface InscripcionRepository extends JpaRepository<Inscripcion, Integer> {
     // Cambiar esto
@@ -31,12 +30,17 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Intege
     @Query("SELECT COUNT(i) FROM Inscripcion i WHERE DATE(i.fechaInscripcion) = CURRENT_DATE AND i.estado = 'ACTIVO'")
     Long countInscripcionesHoy();
     
+    @Query("SELECT COALESCE(SUM(p.precio), 0.0) FROM Inscripcion i JOIN i.plan p WHERE i.estado = 'ACTIVO'")
+    Double sumTotalInscripciones();
+    
     @Query(value = """
         SELECT 
             DATE_FORMAT(i.fecha_inscripcion, '%Y-%m') as mes,
             MONTHNAME(i.fecha_inscripcion) as nombreMes,
-            COUNT(*) as cantidadInscripciones
+            COUNT(*) as cantidadInscripciones,
+            COALESCE(SUM(p.precio), 0.0) as montoTotal
         FROM inscripcion i 
+        JOIN plan p ON i.plan_id = p.id_plan
         WHERE i.estado = 'ACTIVO' 
         AND i.fecha_inscripcion >= DATE_SUB(CURRENT_DATE, INTERVAL 6 MONTH)
         GROUP BY mes, nombreMes

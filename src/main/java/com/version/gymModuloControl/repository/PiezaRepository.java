@@ -1,13 +1,21 @@
 package com.version.gymModuloControl.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import com.version.gymModuloControl.model.Pieza;
-import org.springframework.data.jpa.repository.Query;
-
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.version.gymModuloControl.model.Pieza;
+
 public interface PiezaRepository extends JpaRepository<Pieza, Integer> {
+    
+    @Query(value = """
+        SELECT COALESCE(SUM(a.total), 0.0)
+        FROM alquiler a
+        WHERE a.estado = 'FINALIZADO'
+        """, nativeQuery = true)
+    Double sumTotalAlquileres();
 
     @Query(value = """
         SELECT 
