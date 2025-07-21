@@ -40,6 +40,7 @@ public class HorarioEmpleado {
     @JsonIgnore
     private List<DetalleInscripcion> detallesInscripcion;
 
+
 }
 
 

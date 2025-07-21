@@ -6,19 +6,21 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.version.gymModuloControl.model.EstadoInscripcion;
 import com.version.gymModuloControl.model.Inscripcion;
+import com.version.gymModuloControl.model.Plan;
 
 public interface InscripcionRepository extends JpaRepository<Inscripcion, Integer> {
     // Cambiar esto
     List<Inscripcion> findByClienteIdCliente(Integer clienteId);
-    
+
     // Cambiar esto
     List<Inscripcion> findByRecepcionistaIdEmpleado(Integer recepcionistaId);
 
     boolean existsByPlan_IdPlan(Integer idPlan);
     Optional<Inscripcion> findByClienteIdClienteAndFechaFinAfterAndEstadoTrue(Integer idCliente, LocalDate fecha);
     Optional<Inscripcion> findTopByClienteIdClienteOrderByFechaInscripcionDesc(Integer idCliente);
-
-
+    List<Inscripcion> findByClienteIdClienteAndEstadoIn(Integer idCliente, List<String> estados);
+    List<Inscripcion> findByPlanIdPlanAndEstado(Integer idPlan, EstadoInscripcion estado);
 
 }

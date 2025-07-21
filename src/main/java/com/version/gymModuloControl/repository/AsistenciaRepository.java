@@ -12,4 +12,3 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Integer>
     List<Asistencia> findByClienteIdCliente(Integer clienteId);
     boolean existsByClienteAndFecha(Cliente cliente, LocalDate fecha);
 }
-

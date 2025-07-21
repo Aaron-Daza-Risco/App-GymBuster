@@ -42,7 +42,7 @@ public class InscripcionController {
     }
 
     @GetMapping("/horarios-instructor/{idEmpleado}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA', 'ENTRENADOR')")
     public List<HorarioInstructorDTO> listarHorariosPorInstructor(@PathVariable Integer idEmpleado) {
         return instructorService.obtenerHorariosPorInstructor(idEmpleado);
     }
@@ -85,6 +85,21 @@ public class InscripcionController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/planes-inscritos/{idCliente}")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<List<PlanesInscritosDTO>> obtenerPlanesInscritosPorCliente(@PathVariable Integer idCliente) {
+        List<PlanesInscritosDTO> planes = inscripcionService.obtenerPlanesInscritosPorCliente(idCliente);
+        return ResponseEntity.ok(planes);
+    }
+
+    @GetMapping("/historial-planes/{idCliente}")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<List<PlanesInscritosDTO>> obtenerHistorialPlanesPorCliente(@PathVariable Integer idCliente) {
+        List<PlanesInscritosDTO> historial = inscripcionService.obtenerHistorialPlanesPorCliente(idCliente);
+        return ResponseEntity.ok(historial);
+    }
+
 
 
 }
