@@ -46,7 +46,6 @@ import com.version.gymModuloControl.repository.PersonaRepository;
 import com.version.gymModuloControl.repository.RolRepository;
 import com.version.gymModuloControl.repository.UsuarioRepository;
 import com.version.gymModuloControl.repository.UsuarioRolRepository;
-import com.version.gymModuloControl.service.EmailService;
 
 
 @Service
@@ -102,19 +101,44 @@ public class AuthService {
             // Actualizar último acceso y obtener ID del usuario
             Optional<Usuario> usuarioOpt = usuarioRepository.findByNombreUsuario(loginRequest.getNombreUsuario());
             Integer userId = null;
+            List<String> todosLosRoles = new ArrayList<>();
+            
             if (usuarioOpt.isPresent()) {
                 Usuario usuario = usuarioOpt.get();
                 usuario.setUltimoAcceso(LocalDateTime.now());
                 usuarioRepository.save(usuario);
                 userId = usuario.getId();
+                
+                // Verificar si el usuario tiene múltiples roles (empleado y cliente)
+                List<UsuarioRol> rolesUsuario = usuarioRolRepository.findByUsuario_Id(userId);
+                todosLosRoles = rolesUsuario.stream()
+                                            .map(ur -> "ROLE_" + ur.getRol().getNombre())
+                                            .collect(Collectors.toList());
             }
 
             // Logging para propósitos de depuración
             System.out.println("Usuario ID: " + userId);
             System.out.println("Roles asignados: " + roles);
 
-            // Modificar JwtResponse para incluir el ID
-            JwtResponse response = new JwtResponse(userId, jwt, "Bearer", userDetails.getUsername(), roles);
+            // Crear JwtResponse con información de múltiples roles
+            boolean tieneMultiplesRoles = todosLosRoles.contains("ROLE_CLIENTE") && 
+                                        (todosLosRoles.contains("ROLE_ENTRENADOR") || 
+                                         todosLosRoles.contains("ROLE_RECEPCIONISTA") || 
+                                         todosLosRoles.contains("ROLE_ADMIN"));
+            
+            // Logging para propósitos de depuración
+            System.out.println("Usuario tiene múltiples roles: " + tieneMultiplesRoles);
+            System.out.println("Todos los roles del usuario: " + todosLosRoles);
+                                         
+            JwtResponse response = new JwtResponse(
+                userId, 
+                jwt, 
+                "Bearer", 
+                userDetails.getUsername(), 
+                roles, 
+                todosLosRoles, 
+                tieneMultiplesRoles
+            );
 
             return response;
         } catch (AuthenticationException e) {
@@ -222,6 +246,26 @@ public class AuthService {
             }
 
             empleado = empleadoRepository.save(empleado);
+            
+            // Crear automáticamente una cuenta de cliente para el empleado
+            Cliente clienteEmpleado = new Cliente();
+            clienteEmpleado.setPersona(persona);
+            clienteEmpleado.setDireccion(request.getDireccion() != null ? request.getDireccion() : "");
+            clienteEmpleado.setEstado(true);
+            clienteEmpleado.setFechaRegistro(LocalDate.now());
+            clienteRepository.save(clienteEmpleado);
+            
+            // Asignar también el rol de cliente al usuario
+            Rol rolCliente = rolRepository.findByNombre("CLIENTE")
+                    .orElseThrow(() -> new RuntimeException("Rol CLIENTE no encontrado"));
+            
+            UsuarioRol usuarioRolCliente = new UsuarioRol();
+            usuarioRolCliente.setUsuario(usuario);
+            usuarioRolCliente.setRol(rolCliente);
+            usuarioRolRepository.save(usuarioRolCliente);
+            
+            System.out.println("Cuenta de cliente creada automáticamente para el empleado: " + 
+                              persona.getNombre() + " " + persona.getApellidos());
 
             // Si es entrenador y se proporcionaron especialidades, asignarlas
             if (rolSolicitado.equals("ENTRENADOR") && request.getEspecialidadesIds() != null) {
@@ -523,26 +567,69 @@ public class AuthService {
         boolean usuarioEsCliente = rolActual.equals("CLIENTE");
         boolean usuarioEsEmpleado = rolActual.equals("ADMIN") || rolActual.equals("RECEPCIONISTA") || rolActual.equals("ENTRENADOR");
 
-        // Ya no se restringe el cambio de empleado a cliente
 
+        if (usuarioEsEmpleado && esRolCliente) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("No está permitido cambiar un empleado a rol de cliente");
+        }        // Obtener todos los roles actuales del usuario
         List<UsuarioRol> rolesActuales = usuarioRolRepository.findByUsuario_Id(userId);
-
-        usuario.setUsuarioRoles(new ArrayList<>());
-        usuarioRepository.save(usuario);
-
-        if (!rolesActuales.isEmpty()) {
-            usuarioRolRepository.deleteAll(rolesActuales);
-            entityManager.flush();
+        
+        // Información de depuración
+        System.out.println("Roles actuales del usuario " + userId + ":");
+        for (UsuarioRol ur : rolesActuales) {
+            System.out.println(" - " + ur.getRol().getNombre() + " (ID: " + ur.getIdUsuarioRol() + ")");
         }
 
-        UsuarioRol nuevoUsuarioRol = new UsuarioRol();
-        nuevoUsuarioRol.setUsuario(usuario);
-        nuevoUsuarioRol.setRol(rolOpt.get());
-        nuevoUsuarioRol = usuarioRolRepository.save(nuevoUsuarioRol);
+        // Verificar si el usuario tiene rol CLIENTE que debe conservarse
+        boolean tieneRolCliente = false;
+        
+        for (UsuarioRol ur : rolesActuales) {
+            if (ur.getRol().getNombre().equals("CLIENTE")) {
+                tieneRolCliente = true;
+                break;
+            }
+        }
+        
+        // Filtrar roles que no sean CLIENTE para eliminar solo los roles de empleado
+        List<UsuarioRol> rolesAEliminar = rolesActuales.stream()
+            .filter(ur -> !ur.getRol().getNombre().equals("CLIENTE") || 
+                          (ur.getRol().getNombre().equals("CLIENTE") && rolNombre.equals("CLIENTE")))
+            .collect(Collectors.toList());
+            
+        // Si el nuevo rol es CLIENTE y ya tiene ese rol, no hacer nada
+        if (rolNombre.equals("CLIENTE") && tieneRolCliente) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "El usuario ya tiene el rol de CLIENTE");
+            return ResponseEntity.ok(response);
+        }
+            
+        // Primero, desasociar los roles de empleado del usuario
+        if (!rolesAEliminar.isEmpty()) {
+            // Remover solo los roles que se van a eliminar de la colección del usuario
+            usuario.getUsuarioRoles().removeAll(rolesAEliminar);
+            usuarioRepository.save(usuario);
+            
+            // Luego eliminar los registros de usuario_rol de empleado
+            usuarioRolRepository.deleteAll(rolesAEliminar);
+            entityManager.flush(); // Asegurar que se apliquen los cambios
+        }
 
-        List<UsuarioRol> nuevosRoles = new ArrayList<>();
-        nuevosRoles.add(nuevoUsuarioRol);
-        usuario.setUsuarioRoles(nuevosRoles);
+        // Crear y asignar el nuevo rol solo si no es CLIENTE o si no tiene ya el rol CLIENTE
+        if (!rolNombre.equals("CLIENTE") || !tieneRolCliente) {
+            UsuarioRol nuevoUsuarioRol = new UsuarioRol();
+            nuevoUsuarioRol.setUsuario(usuario);
+            nuevoUsuarioRol.setRol(rolOpt.get());
+            nuevoUsuarioRol = usuarioRolRepository.save(nuevoUsuarioRol);
+            
+            // Agregar el nuevo rol a la colección del usuario
+            if (usuario.getUsuarioRoles() == null) {
+                usuario.setUsuarioRoles(new ArrayList<>());
+            }
+            usuario.getUsuarioRoles().add(nuevoUsuarioRol);
+        }
+
+        // Guardar el usuario con sus roles actualizados
+
         usuarioRepository.save(usuario);
 
         if (!rolNombre.equals("ENTRENADOR")) {
