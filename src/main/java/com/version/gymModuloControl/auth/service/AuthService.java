@@ -151,167 +151,136 @@ public class AuthService {
         try {
             System.out.println("======= INICIO PROCESO REGISTRO =======");
             System.out.println("Datos de registro: Usuario=" + request.getNombreUsuario() +
-                            ", Rol=" + request.getRol() +
-                            ", Nombre=" + request.getNombre() + 
-                            " " + request.getApellidos());
-                            
+                    ", Rol=" + request.getRol() +
+                    ", Nombre=" + request.getNombre() +
+                    " " + request.getApellidos());
+
             // Verificar si existe el usuario
             if (usuarioRepository.findByNombreUsuario(request.getNombreUsuario()).isPresent()) {
                 System.out.println("Error: El nombre de usuario ya existe: " + request.getNombreUsuario());
                 return ResponseEntity.badRequest().body("Error: El nombre de usuario ya existe.");
             }
 
-            // Obtener rol del usuario autenticado
-            String rolActual = authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .findFirst()
-                    .orElse("")
-                    .replace("ROLE_", "");
-                    
-            System.out.println("Rol del usuario autenticado: " + rolActual);
+            // Validar longitud mínima de contraseña
+            if (request.getContrasena().length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body("Error: La contraseña debe tener al menos 6 caracteres.");
+            }
 
-            // Validar si el rol solicitado puede ser creado por el rol actual
+            // 1. Crear Usuario
+            Usuario usuario = new Usuario();
+            usuario.setNombreUsuario(request.getNombreUsuario());
+
+            // Encriptar contraseña
+            String passwordEncriptada = passwordEncoder.encode(request.getContrasena());
+            usuario.setContrasena(passwordEncriptada);
+            usuario.setEstado(true);
+            usuarioRepository.save(usuario);
+
+            // 2. Asignar Rol
             String rolSolicitado = request.getRol().toUpperCase();
+            Rol rol = rolRepository.findByNombre(rolSolicitado)
+                    .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
-        if (rolActual.equals("ADMIN")) {
-            if (!List.of("ENTRENADOR", "RECEPCIONISTA", "CLIENTE").contains(rolSolicitado)) {
-                return ResponseEntity.badRequest()
-                        .body("Error: Un administrador solo puede crear entrenadores, recepcionistas o clientes.");
-            }
-        } else if (rolActual.equals("RECEPCIONISTA")) {
-            if (!List.of("CLIENTE", "ENTRENADOR").contains(rolSolicitado)) {
-                return ResponseEntity.badRequest()
-                        .body("Error: Una recepcionista solo puede crear clientes o entrenadores.");
-            }
-        } else {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para crear usuarios.");
-        }
+            UsuarioRol usuarioRol = new UsuarioRol();
+            usuarioRol.setUsuario(usuario);
+            usuarioRol.setRol(rol);
+            usuarioRolRepository.save(usuarioRol);
 
-        // Evaluar longitud mínima de contraseña
-        if (request.getContrasena().length() < 6) {
-            return ResponseEntity.badRequest()
-                    .body("Error: La contraseña debe tener al menos 6 caracteres.");
-        }
+            // 3. Crear Persona
+            Persona persona = new Persona();
+            persona.setNombre(request.getNombre());
+            persona.setApellidos(request.getApellidos());
+            persona.setGenero(request.getGenero());
+            persona.setCorreo(request.getCorreo());
+            persona.setDni(request.getDni());
+            persona.setCelular(request.getCelular());
+            persona.setFechaNacimiento(request.getFechaNacimiento());
+            persona.setUsuario(usuario);
+            personaRepository.save(persona);
 
-        // 1. Crear Usuario
-        Usuario usuario = new Usuario();
-        usuario.setNombreUsuario(request.getNombreUsuario());
+            if (rolSolicitado.equals("CLIENTE")) {
+                Cliente cliente = new Cliente();
+                cliente.setPersona(persona);
+                cliente.setDireccion(request.getDireccion());
+                cliente.setEstado(true);
+                cliente.setFechaRegistro(LocalDate.now());
+                clienteRepository.save(cliente);
 
-        // Encriptar contraseña
-        String passwordEncriptada = passwordEncoder.encode(request.getContrasena());
-        usuario.setContrasena(passwordEncriptada);
-        usuario.setEstado(true);
-        usuarioRepository.save(usuario);
+            } else {
+                Empleado empleado = new Empleado();
+                empleado.setPersona(persona);
+                empleado.setRuc(request.getRuc());
+                empleado.setSalario(request.getSalario());
+                empleado.setFechaContratacion(request.getFechaContratacion());
+                empleado.setEstado(true);
 
-        // 2. Asignar Rol
-        Rol rol = rolRepository.findByNombre(rolSolicitado)
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                if (rolSolicitado.equals("ENTRENADOR")) {
+                    empleado.setTipoInstructor(TipoInstructor.valueOf(request.getTipoInstructor()));
+                    empleado.setCupoMaximo(request.getCupoMaximo());
+                }
 
-        UsuarioRol usuarioRol = new UsuarioRol();
-        usuarioRol.setUsuario(usuario);
-        usuarioRol.setRol(rol);
-        usuarioRolRepository.save(usuarioRol);
+                empleado = empleadoRepository.save(empleado);
 
-        // 3. Crear Persona
-        Persona persona = new Persona();
-        persona.setNombre(request.getNombre());
-        persona.setApellidos(request.getApellidos());
-        persona.setGenero(request.getGenero());
-        persona.setCorreo(request.getCorreo());
-        persona.setDni(request.getDni());
-        persona.setCelular(request.getCelular());
-        persona.setFechaNacimiento(request.getFechaNacimiento());
-        persona.setUsuario(usuario);
-        personaRepository.save(persona);
+                // Crear automáticamente una cuenta de cliente para el empleado
+                Cliente clienteEmpleado = new Cliente();
+                clienteEmpleado.setPersona(persona);
+                clienteEmpleado.setDireccion(request.getDireccion() != null ? request.getDireccion() : "");
+                clienteEmpleado.setEstado(true);
+                clienteEmpleado.setFechaRegistro(LocalDate.now());
+                clienteRepository.save(clienteEmpleado);
 
-        if (rolSolicitado.equals("CLIENTE")) {
-            Cliente cliente = new Cliente();
-            cliente.setPersona(persona);
-            cliente.setDireccion(request.getDireccion());
-            cliente.setEstado(true);
-            cliente.setFechaRegistro(LocalDate.now());
-            clienteRepository.save(cliente);
+                // Asignar también el rol de cliente al usuario
+                Rol rolCliente = rolRepository.findByNombre("CLIENTE")
+                        .orElseThrow(() -> new RuntimeException("Rol CLIENTE no encontrado"));
 
-        } else {
-            Empleado empleado = new Empleado();
-            empleado.setPersona(persona);
-            empleado.setRuc(request.getRuc());
-            empleado.setSalario(request.getSalario());
-            empleado.setFechaContratacion(request.getFechaContratacion());
-            empleado.setEstado(true);
+                UsuarioRol usuarioRolCliente = new UsuarioRol();
+                usuarioRolCliente.setUsuario(usuario);
+                usuarioRolCliente.setRol(rolCliente);
+                usuarioRolRepository.save(usuarioRolCliente);
 
-            if (rolSolicitado.equals("ENTRENADOR")) {
-                empleado.setTipoInstructor(TipoInstructor.valueOf(request.getTipoInstructor()));
-                empleado.setCupoMaximo(request.getCupoMaximo());
-            }
+                System.out.println("Cuenta de cliente creada automáticamente para el empleado: " +
+                        persona.getNombre() + " " + persona.getApellidos());
 
-            empleado = empleadoRepository.save(empleado);
-            
-            // Crear automáticamente una cuenta de cliente para el empleado
-            Cliente clienteEmpleado = new Cliente();
-            clienteEmpleado.setPersona(persona);
-            clienteEmpleado.setDireccion(request.getDireccion() != null ? request.getDireccion() : "");
-            clienteEmpleado.setEstado(true);
-            clienteEmpleado.setFechaRegistro(LocalDate.now());
-            clienteRepository.save(clienteEmpleado);
-            
-            // Asignar también el rol de cliente al usuario
-            Rol rolCliente = rolRepository.findByNombre("CLIENTE")
-                    .orElseThrow(() -> new RuntimeException("Rol CLIENTE no encontrado"));
-            
-            UsuarioRol usuarioRolCliente = new UsuarioRol();
-            usuarioRolCliente.setUsuario(usuario);
-            usuarioRolCliente.setRol(rolCliente);
-            usuarioRolRepository.save(usuarioRolCliente);
-            
-            System.out.println("Cuenta de cliente creada automáticamente para el empleado: " + 
-                              persona.getNombre() + " " + persona.getApellidos());
+                // Si es entrenador y se proporcionaron especialidades, asignarlas
+                if (rolSolicitado.equals("ENTRENADOR") && request.getEspecialidadesIds() != null) {
+                    System.out.println("Intentando asignar especialidades al entrenador ID: " + empleado.getIdEmpleado());
+                    System.out.println("Especialidades a asignar: " + request.getEspecialidadesIds());
 
-            // Si es entrenador y se proporcionaron especialidades, asignarlas
-            if (rolSolicitado.equals("ENTRENADOR") && request.getEspecialidadesIds() != null) {
-                System.out.println("Intentando asignar especialidades al entrenador ID: " + empleado.getIdEmpleado());
-                System.out.println("Especialidades a asignar: " + request.getEspecialidadesIds());
-                
-                try {
-                    // Asegurarnos de que el empleado esté completamente persistido antes de asignar especialidades
-                    entityManager.flush();
-                    
-                    // Asignar especialidades directamente, sin usar el método que podría estar fallando
-                    List<Especialidad> especialidades = especialidadRepository.findAllById(request.getEspecialidadesIds());
-                    System.out.println("Especialidades encontradas: " + especialidades.size());
-                    
-                    for (Especialidad especialidad : especialidades) {
-                        InstructorEspecialidad instructorEspecialidad = new InstructorEspecialidad();
-                        instructorEspecialidad.setEmpleado(empleado);
-                        instructorEspecialidad.setEspecialidad(especialidad);
-                        instructorEspecialidad.setEstado(true);
-                        instructorEspecialidadRepository.save(instructorEspecialidad);
-                        System.out.println("Asignada especialidad ID: " + especialidad.getId() + 
-                                           " al empleado ID: " + empleado.getIdEmpleado());
+                    try {
+                        entityManager.flush();
+                        List<Especialidad> especialidades = especialidadRepository.findAllById(request.getEspecialidadesIds());
+                        System.out.println("Especialidades encontradas: " + especialidades.size());
+
+                        for (Especialidad especialidad : especialidades) {
+                            InstructorEspecialidad instructorEspecialidad = new InstructorEspecialidad();
+                            instructorEspecialidad.setEmpleado(empleado);
+                            instructorEspecialidad.setEspecialidad(especialidad);
+                            instructorEspecialidad.setEstado(true);
+                            instructorEspecialidadRepository.save(instructorEspecialidad);
+                            System.out.println("Asignada especialidad ID: " + especialidad.getId() +
+                                    " al empleado ID: " + empleado.getIdEmpleado());
+                        }
+                        entityManager.flush();
+                    } catch (Exception e) {
+                        System.err.println("Error al asignar especialidades: " + e.getMessage());
+                        e.printStackTrace();
                     }
-                    
-                    // Flush para asegurar que se guarden todas las relaciones
-                    entityManager.flush();
-                } catch (Exception e) {
-                    System.err.println("Error al asignar especialidades: " + e.getMessage());
-                    e.printStackTrace();
-                    // Continuar con el registro aunque falle la asignación de especialidades
                 }
             }
-        }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("mensaje", "Usuario registrado exitosamente");
-        response.put("usuarioId", usuario.getId());
-        
-        System.out.println("======= FIN PROCESO REGISTRO EXITOSO =======");
-        return ResponseEntity.ok(response);
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Usuario registrado exitosamente");
+            response.put("usuarioId", usuario.getId());
+
+            System.out.println("======= FIN PROCESO REGISTRO EXITOSO =======");
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.err.println("======= ERROR EN PROCESO REGISTRO =======");
             System.err.println("Error: " + e.getMessage());
-            e.printStackTrace(); // Solo para desarrollo
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .body("Error al registrar usuario: " + e.getMessage());
+                    .body("Error al registrar usuario: " + e.getMessage());
         }
     }
 
@@ -544,156 +513,106 @@ public class AuthService {
     public ResponseEntity<?> updateUserRole(int userId, String rolNombre) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findById(userId);
         if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Usuario no encontrado");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado");
         }
 
         Usuario usuario = usuarioOpt.get();
         Optional<Rol> rolOpt = rolRepository.findByNombre(rolNombre);
-
         if (rolOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Rol no válido");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Rol no válido");
         }
 
-        // Determinar el rol actual del usuario
-        String rolActual = "";
-        if (!usuario.getUsuarioRoles().isEmpty()) {
-            rolActual = usuario.getUsuarioRoles().get(0).getRol().getNombre();
-        }
-
-        boolean esRolCliente = rolNombre.equals("CLIENTE");
-        boolean esRolEmpleado = rolNombre.equals("ADMIN") || rolNombre.equals("RECEPCIONISTA") || rolNombre.equals("ENTRENADOR");
-        boolean usuarioEsCliente = rolActual.equals("CLIENTE");
-        boolean usuarioEsEmpleado = rolActual.equals("ADMIN") || rolActual.equals("RECEPCIONISTA") || rolActual.equals("ENTRENADOR");
-
-
-        if (usuarioEsEmpleado && esRolCliente) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("No está permitido cambiar un empleado a rol de cliente");
-        }        // Obtener todos los roles actuales del usuario
         List<UsuarioRol> rolesActuales = usuarioRolRepository.findByUsuario_Id(userId);
-        
-        // Información de depuración
-        System.out.println("Roles actuales del usuario " + userId + ":");
-        for (UsuarioRol ur : rolesActuales) {
-            System.out.println(" - " + ur.getRol().getNombre() + " (ID: " + ur.getIdUsuarioRol() + ")");
-        }
+        boolean tieneRolCliente = rolesActuales.stream().anyMatch(ur -> ur.getRol().getNombre().equals("CLIENTE"));
 
-        // Verificar si el usuario tiene rol CLIENTE que debe conservarse
-        boolean tieneRolCliente = false;
-        
-        for (UsuarioRol ur : rolesActuales) {
-            if (ur.getRol().getNombre().equals("CLIENTE")) {
-                tieneRolCliente = true;
-                break;
+        // Si se cambia a CLIENTE, eliminar solo los roles de empleado (no el registro de empleado)
+        if (rolNombre.equals("CLIENTE")) {
+            List<UsuarioRol> rolesEmpleado = rolesActuales.stream()
+                    .filter(ur -> ur.getRol().getNombre().equals("ADMIN") ||
+                            ur.getRol().getNombre().equals("RECEPCIONISTA") ||
+                            ur.getRol().getNombre().equals("ENTRENADOR"))
+                    .collect(Collectors.toList());
+            usuario.getUsuarioRoles().removeAll(rolesEmpleado);
+            usuarioRolRepository.deleteAll(rolesEmpleado);
+
+            // No eliminar el registro de empleado
+
+            // Si no tiene rol cliente, asignarlo
+            if (!tieneRolCliente) {
+                UsuarioRol nuevoRol = new UsuarioRol();
+                nuevoRol.setUsuario(usuario);
+                nuevoRol.setRol(rolOpt.get());
+                usuarioRolRepository.save(nuevoRol);
+                usuario.getUsuarioRoles().add(nuevoRol);
             }
-        }
-        
-        // Filtrar roles que no sean CLIENTE para eliminar solo los roles de empleado
-        List<UsuarioRol> rolesAEliminar = rolesActuales.stream()
-            .filter(ur -> !ur.getRol().getNombre().equals("CLIENTE") || 
-                          (ur.getRol().getNombre().equals("CLIENTE") && rolNombre.equals("CLIENTE")))
-            .collect(Collectors.toList());
-            
-        // Si el nuevo rol es CLIENTE y ya tiene ese rol, no hacer nada
-        if (rolNombre.equals("CLIENTE") && tieneRolCliente) {
+
+            usuarioRepository.save(usuario);
+            entityManager.flush();
+            entityManager.clear();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "El usuario ya tiene el rol de CLIENTE");
+            response.put("mensaje", "Ahora el usuario es solo CLIENTE");
+            response.put("nuevoRol", rolNombre);
             return ResponseEntity.ok(response);
         }
-            
-        // Primero, desasociar los roles de empleado del usuario
-        if (!rolesAEliminar.isEmpty()) {
-            // Remover solo los roles que se van a eliminar de la colección del usuario
-            usuario.getUsuarioRoles().removeAll(rolesAEliminar);
-            usuarioRepository.save(usuario);
-            
-            // Luego eliminar los registros de usuario_rol de empleado
-            usuarioRolRepository.deleteAll(rolesAEliminar);
-            entityManager.flush(); // Asegurar que se apliquen los cambios
-        }
 
-        // Crear y asignar el nuevo rol solo si no es CLIENTE o si no tiene ya el rol CLIENTE
-        if (!rolNombre.equals("CLIENTE") || !tieneRolCliente) {
-            UsuarioRol nuevoUsuarioRol = new UsuarioRol();
-            nuevoUsuarioRol.setUsuario(usuario);
-            nuevoUsuarioRol.setRol(rolOpt.get());
-            nuevoUsuarioRol = usuarioRolRepository.save(nuevoUsuarioRol);
-            
-            // Agregar el nuevo rol a la colección del usuario
-            if (usuario.getUsuarioRoles() == null) {
-                usuario.setUsuarioRoles(new ArrayList<>());
+        // Si era cliente y se le asigna rol de empleado
+        if (tieneRolCliente && (rolNombre.equals("RECEPCIONISTA") || rolNombre.equals("ADMIN") || rolNombre.equals("ENTRENADOR"))) {
+            boolean yaTieneRol = rolesActuales.stream().anyMatch(ur -> ur.getRol().getNombre().equals(rolNombre));
+            if (!yaTieneRol) {
+                UsuarioRol nuevoRol = new UsuarioRol();
+                nuevoRol.setUsuario(usuario);
+                nuevoRol.setRol(rolOpt.get());
+                usuarioRolRepository.save(nuevoRol);
+                usuario.getUsuarioRoles().add(nuevoRol);
             }
-            usuario.getUsuarioRoles().add(nuevoUsuarioRol);
+
+            // Crear registro de empleado si no existe
+            Optional<Empleado> empleadoExistente = empleadoRepository.findByPersonaIdPersona(usuario.getPersona().getIdPersona());
+            if (empleadoExistente.isEmpty()) {
+                Empleado nuevoEmpleado = new Empleado();
+                nuevoEmpleado.setPersona(usuario.getPersona());
+                nuevoEmpleado.setEstado(true);
+                nuevoEmpleado.setFechaContratacion(LocalDate.now());
+                empleadoRepository.save(nuevoEmpleado);
+            }
+
+            usuarioRepository.save(usuario);
+            entityManager.flush();
+            entityManager.clear();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("mensaje", "Rol de empleado asignado correctamente");
+            response.put("nuevoRol", rolNombre);
+            return ResponseEntity.ok(response);
         }
 
-        // Guardar el usuario con sus roles actualizados
+        // Otros cambios de rol (por ejemplo entre roles de empleado)
+        List<UsuarioRol> rolesAEliminar = rolesActuales.stream()
+                .filter(ur -> ur.getRol().getNombre().equals("ADMIN") ||
+                        ur.getRol().getNombre().equals("RECEPCIONISTA") ||
+                        ur.getRol().getNombre().equals("ENTRENADOR"))
+                .filter(ur -> !ur.getRol().getNombre().equals(rolNombre))
+                .collect(Collectors.toList());
+        usuario.getUsuarioRoles().removeAll(rolesAEliminar);
+        usuarioRolRepository.deleteAll(rolesAEliminar);
+
+        boolean yaTieneNuevoRol = rolesActuales.stream().anyMatch(ur -> ur.getRol().getNombre().equals(rolNombre));
+        if (!yaTieneNuevoRol) {
+            UsuarioRol nuevoRol = new UsuarioRol();
+            nuevoRol.setUsuario(usuario);
+            nuevoRol.setRol(rolOpt.get());
+            usuarioRolRepository.save(nuevoRol);
+            usuario.getUsuarioRoles().add(nuevoRol);
+        }
 
         usuarioRepository.save(usuario);
-
-        if (!rolNombre.equals("ENTRENADOR")) {
-            Optional<Empleado> empleadoOpt = empleadoRepository.findByPersonaIdPersona(usuario.getPersona().getIdPersona());
-            if (empleadoOpt.isPresent()) {
-                Empleado empleado = empleadoOpt.get();
-                empleado.setTipoInstructor(null);
-                empleado.setCupoMaximo(null);
-                empleadoRepository.save(empleado);
-            }
-        }
-
-        // Desactivar perfil de cliente si el usuario era cliente y ahora es empleado
-        if (usuarioEsCliente && esRolEmpleado) {
-            Optional<Cliente> clienteOpt = clienteRepository.findByPersona(usuario.getPersona());
-            if (clienteOpt.isPresent()) {
-                Cliente cliente = clienteOpt.get();
-                cliente.setEstado(false);
-                clienteRepository.save(cliente);
-                System.out.println("Perfil de cliente desactivado para usuario ID: " + usuario.getId());
-            }
-        }
-
-        // Activar perfil de cliente si el nuevo rol es CLIENTE
-        if (esRolCliente) {
-            Optional<Cliente> clienteOpt = clienteRepository.findByPersona(usuario.getPersona());
-            if (clienteOpt.isPresent()) {
-                Cliente cliente = clienteOpt.get();
-                cliente.setEstado(true);
-                clienteRepository.save(cliente);
-                System.out.println("Perfil de cliente activado para usuario ID: " + usuario.getId());
-            } else {
-                // Si no existe, puedes crear el registro de cliente aquí si lo necesitas
-                // Cliente nuevoCliente = new Cliente();
-                // nuevoCliente.setPersona(usuario.getPersona());
-                // nuevoCliente.setEstado(true);
-                // nuevoCliente.setFechaRegistro(LocalDate.now());
-                // clienteRepository.save(nuevoCliente);
-            }
-        }
-
         entityManager.flush();
         entityManager.clear();
 
         Map<String, Object> response = new HashMap<>();
         response.put("mensaje", "Rol actualizado correctamente");
         response.put("nuevoRol", rolNombre);
-
-        if (usuarioEsCliente && esRolEmpleado) {
-            Persona persona = usuario.getPersona();
-            if (persona != null) {
-                Optional<Empleado> empleadoExistente = empleadoRepository.findByPersonaIdPersona(persona.getIdPersona());
-                if (empleadoExistente.isEmpty()) {
-                    Empleado nuevoEmpleado = new Empleado();
-                    nuevoEmpleado.setPersona(persona);
-                    nuevoEmpleado.setEstado(true);
-                    nuevoEmpleado.setFechaContratacion(LocalDate.now());
-                    empleadoRepository.save(nuevoEmpleado);
-                    response.put("empleadoCreado", true);
-                    response.put("mensaje", "Rol actualizado correctamente. Se ha creado un registro de empleado");
-                }
-            }
-        }
-
         return ResponseEntity.ok(response);
     }
 
